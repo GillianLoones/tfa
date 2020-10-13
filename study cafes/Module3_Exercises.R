@@ -8,28 +8,28 @@ library(tidyverse)
 
 # --- EXERCISE 3.10.3 -- Piping ------------------------------------------------
 
-head(mtcars)
-?mtcars
+  head(mtcars)
+  ?mtcars
 
-mtcars %>% select(cyl, gear, hp, mpg) %>% filter(gear == 4 & cyl == 4)
+  mtcars %>% select(cyl, gear, hp, mpg) %>% filter(gear == 4 & cyl == 4)
 
 ### 1) --- Create a pipe that selects columns related to miles, horsepower, transmission and gears.
-q1 <- mtcars %>% select(mpg, hp, am, gear)
-q1
+           q1 <- mtcars %>% select(mpg, hp, am, gear)
+           q1
 
 ### 2) --- Given the answer in 1), filter so cars have miles less than 20 and 4 gears.
-q1 %>% filter(mpg < 20 & gear == 4)
+           q1 %>% filter(mpg < 20 & gear == 4)
 
 ### 3) --- Given the answer in 1), filter so cars have miles less than 20 or 4 gears
-q1 %>% filter(mpg < 20 | gear == 4)
+           q1 %>% filter(mpg < 20 | gear == 4)
 
 ### 4) --- Create a pipe that filters the cars having miles less than 20 and 4 gears and selects columns related to weight and engine.
-mtcars %>% filter(mpg < 20 & gear == 4) %>% select(wt, vs)
+           mtcars %>% filter(mpg < 20 & gear == 4) %>% select(wt, vs)
 
 ### 5) --- Solve Question 4 without the pipe operator.
-mtcars_q5 <- filter(mtcars, mpg < 20 & gear == 4)
-mtcars_q5 <- select(mtcars_filtered, wt, vs)
-mtcars_q5
+           mtcars_q5 <- filter(mtcars, mpg < 20 & gear == 4)
+           mtcars_q5 <- select(mtcars_filtered, wt, vs)
+           mtcars_q5
 
 
 
