@@ -202,7 +202,9 @@ library(tidyverse)
     
 ### Modify the solution using expand_grid so only one loop is used.
     
-    # Rebuild empty matrix
+    # Rebuild empty matrix 
+    # Teacher forgets this in the provided solution
+    # Hence, provided solution is wrong (as it gives the matrix calculated in 4.6.3)
     idx <- 1:5
     dat <- zips[idx,]
     dat
