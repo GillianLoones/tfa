@@ -28,7 +28,7 @@ library(tidyverse)
 
 ### 5) --- Solve Question 4 without the pipe operator.
            mtcars_q5 <- filter(mtcars, mpg < 20 & gear == 4)
-           mtcars_q5 <- select(mtcars_filtered, wt, vs)
+           mtcars_q5 <- select(mtcars_q5, wt, vs)
            mtcars_q5
 
 
