@@ -1,0 +1,49 @@
+unnamed-chunk-1	download.file
+unnamed-chunk-2	library
+unnamed-chunk-3	cat	read_lines	system.file
+unnamed-chunk-4	csv_file	read_csv
+unnamed-chunk-5	%>%	==	filter	head	hotel	hotels
+unnamed-chunk-6	
+unnamed-chunk-7	dat1	dat2	list
+unnamed-chunk-8	ls	rm
+unnamed-chunk-9	glimpse	library	read_csv	skim	system.file
+unnamed-chunk-10	%>%	hotels	lead_time	select
+unnamed-chunk-11	%>%	hotel	hotels	lead_time	select
+unnamed-chunk-12	%>%	arrange	desc	hotel	hotels	lead_time	select
+unnamed-chunk-13	drive	find	park	start_car
+unnamed-chunk-14	%>%	drive	find	park	start_car
+unnamed-chunk-15	%>%	agent	hotels	select
+unnamed-chunk-16	%>%	arrival_date_month	hotel	hotels	select
+unnamed-chunk-17	%>%	hotels	select	starts_with
+unnamed-chunk-18	%>%	ends_with	hotels	select
+unnamed-chunk-19	%>%	contains	hotels	select
+unnamed-chunk-20	%>%	adults	arrange	babies	children	hotels	select
+unnamed-chunk-21	%>%	adults	arrange	babies	children	desc	hotels	select
+unnamed-chunk-22	%>%	hotels	slice_head
+unnamed-chunk-23	%>%	hotels	slice_tail
+unnamed-chunk-24	%>%	adults	babies	children	hotels	select	slice_max
+unnamed-chunk-25	%>%	==	filter	hotel	hotels
+unnamed-chunk-26	%>%	==	>=	adults	babies	children	filter	hotels	select
+unnamed-chunk-27	%>%	|	==	>=	adults	babies	children	filter	hotels	select
+unnamed-chunk-28	!=	%>%	<	country	filter	hotels	lead_time
+unnamed-chunk-29	%>%	|	>	babies	children	filter	hotels
+unnamed-chunk-30	%>%	|	==	>	babies	children	filter	hotel	hotels
+unnamed-chunk-31	%>%	|	==	>	babies	children	filter	hotel	hotels
+unnamed-chunk-32	%>%	arrange	distinct	hotels	market_segment
+unnamed-chunk-33	%>%	arrange	distinct	hotel	hotels	market_segment
+unnamed-chunk-34	%>%	count	hotels	market_segment
+unnamed-chunk-35	%>%	count	hotels	market_segment
+unnamed-chunk-36	%>%	adults	count	hotels
+unnamed-chunk-37	%>%	count	hotel	hotels	market_segment
+unnamed-chunk-38	%>%	==	adults	count	filter	hotels	is_canceled
+unnamed-chunk-39	%>%	arrange	babies	children	desc	hotels	little_ones	mutate	select
+unnamed-chunk-40	%>%	==	>=	babies	children	filter	hotel	hotels	little_ones	mutate	select
+unnamed-chunk-41	%>%	==	>	babies	children	filter	hotel	hotels	little_ones	mutate	select
+unnamed-chunk-42	%>%	babies	children	count	hotel	hotels	little_ones	mutate	n	sum
+unnamed-chunk-43	%>%	adr	hotels	mean	summarise
+unnamed-chunk-44	%>%	adr	group_by	hotel	hotels	mean	summarise
+unnamed-chunk-45	%>%	group_by	hotel	hotels	n	summarise
+unnamed-chunk-46	%>%	count	hotel	hotels
+unnamed-chunk-47	%>%	adr	hotels	max	mean	median	min	summarise
+unnamed-chunk-48	%>%	adr	group_by	hotel	hotels	max	mean	median	min	summarise
+unnamed-chunk-49	%>%	|	<	>	adr	adults	arrival_date_month	arrival_date_year	babies	children	filter	hotels	select	slice_max	slice_min
