@@ -218,6 +218,10 @@ library(tidyverse)
        # Results show that Oceania had no drops in life expactancy since 1952, the continent has only 2 countries though.
        # Teacher has a slightly different method.
        
+
+              
+########### UNFINISHED - REST OF THE EXERCISES WERE SOLVED IN THE MARKDOWN FILE #############
+       
        
 
        

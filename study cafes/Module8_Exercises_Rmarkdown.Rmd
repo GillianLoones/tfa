@@ -1,0 +1,822 @@
+---
+title: "Exercises Module 8"
+author:
+  - name: Gillian Loones
+    affiliation: MSc IM
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+# set default chunk options
+knitr::opts_chunk$set(
+  echo = TRUE,
+  cache = TRUE,
+  autodep = TRUE
+  )
+```
+
+<!-- Some css for the comments (delete) -->
+```{css, echo=FALSE}
+.comment {
+  color: gold;
+  border-style: dashed;
+  border-width: thin;
+  padding: 10px;
+}
+```
+
+
+## Load packages:
+
+```{r}
+library(tidyverse)
+library(tfa)
+```
+
+
+## Exercise 8.5.1 - Gapminder
+
+The  gapminder data set provides values for life expectancy, GDP per capita, and population, every five years, from 1952 to 2007 for 142 countries. The data can be loaded using the gapminder package:
+
+```{r}
+library(gapminder)
+gapminder
+```
+
+Let us try to examine the data set (use pipes `%>%` as much as possible).
+
+**Question 1 - Use `glimpse`, `summary` and `tail` to examine the data.**
+
+```{r}
+glimpse(gapminder)
+summary(gapminder)
+tail(gapminder)
+```
+
+**Question 2 - Use `count` to count the number of ...**
+
+  **a) countries**
+```{r}
+gapminder %>% 
+count(country) %>% 
+nrow()
+``` 
+
+  **b) continents**
+```{r}
+gapminder %>% 
+count(continent) %>% 
+nrow()
+```   
+
+  **c) countries per continent**
+```{r}
+gapminder %>% 
+count(continent, country) %>% 
+count(continent)
+``` 
+
+
+**Question 3 - Retrieve a vector with all distinct continent values.**
+
+```{r}
+gapminder %>% 
+  distinct(continent) %>% 
+  pull(continent) %>% 
+  as.character()
+```
+
+**Question 4 - Subset rows to find ...**
+
+  **a) all rows with life expectancy less that 29 years**
+```{r}
+gapminder %>% 
+  subset(lifeExp < 29)
+```
+
+  **b) all rows for Rwanda after year 1979**
+```{r}
+gapminder %>% 
+  subset(country == "Rwanda" & year > 1979)
+```
+
+  **c) all rows for Rwanda, Afghanistan or France**
+```{r}
+gapminder %>% 
+  subset(country %in% c("Afghanistan", "Rwanda", "France"))
+```
+
+*NOTE: `filter()` would have worked equally well here, `filter()` and `subset()` are more or less the same `subset()` is native R, `filter()` is `dplyr`*
+
+**Question 5 - Select columns ...***
+
+  **a) year and life expectancy**
+```{r}
+gapminder %>% 
+  select(year, lifeExp)
+```
+  
+  **b) country and GDP per capita**
+```{r}
+gapminder %>% 
+  select(country, gdpPercap)
+```
+
+
+**Question 6 - Subset your data set to find all rows with GDP per capita greater than 40000 in Europe or with GDP per capita less than 500 in Africa.**
+```{r}
+gapminder %>% 
+  filter((gdpPercap > 40000 & continent == "Europe") | (gdpPercap < 500 & continent == "Africa"))
+```
+
+**Question 7 - Use `mutate` to calculate each country’s GDP (population times GDP per capita).**
+
+```{r}
+gapminder %>% 
+  mutate(gdp = pop * gdpPercap)
+```
+
+In general GDP numbers are large and abstract. Let us try to calculate relative numbers.
+
+**Question 8 - Use `mutate` to calculate GDP per capita relative to mean GDP per capita in Denmark over the whole period (`gdpPercap` divided by the mean of Danish `gdpPercap`). Have a look at the calculated data. Does the numbers seem reasonable? I perceive Denmark to be a “high GDP” country, so I predict that the distribution of `gdpPercapRel` is located below 1, possibly even well below.**
+
+```{r}
+# First calculate mean Danish GDP per capite over whole period
+meanGDP_DK <- gapminder %>% 
+  filter(country == "Denmark") %>% 
+  pull(gdpPercap) %>% 
+  mean()
+meanGDP_DK
+
+# Mutate new column
+gapminder %>% 
+  mutate(gdpPercapReltoDK = gdpPercap / meanGDP_DK) # %>% print(n=Inf) # print all rows to examine data
+```
+Interpretation: Data seems right to me. Many countries are well below 1 indeed. Norway is higher than 1 for example, one of the few with higher GDP per capita than Denmark.
+
+
+**Question 9 - Use `arrange` to order**
+
+  **a) data by year then country, as opposed to current by country then year**
+ 
+```{r}
+gapminder %>% 
+  arrange(year, country)
+```
+
+  **b) data from 2007, sorted on life expectancy**
+ 
+```{r}
+gapminder %>% 
+  filter(year == 2007) %>% 
+  arrange(lifeExp)
+```
+
+  **c) data from 2007, sorted on life expectancy in descending order. Hint: use `desc()` inside arrange**
+```{r}
+gapminder %>% 
+ filter(year == 2007) %>% 
+ arrange(desc(lifeExp))
+```
+
+**Question 10 - Use `select` to**
+  **a) rename `year` to `yr` and keep all other columns (the select helper `everything` may be used)**
+  
+  We can use `select` with `everything` as the assignment requests.
+  
+```{r}
+gapminder %>% 
+  select(yr = year, everything())
+```
+  
+  But simply using `rename` makes more sense honestly.
+  
+```{r}
+gapminder %>% 
+  rename(yr = year)
+```
+
+  **b) remove `pop`**
+ 
+```{r}
+gapminder %>% 
+  select(-pop)
+```
+
+  **c) reorder columns in order `year`, `pop`, … (remaining)**
+ 
+```{r}
+gapminder %>% 
+  select(year, pop, everything())
+```
+
+**Question 11 - Use `group_by` and `summarize` to find the**
+  **a) number of observations per continent**
+  
+  Again, we can do as the assignment requests:
+  
+```{r}
+gapminder %>% 
+  group_by(continent) %>% 
+  summarise(n = n())
+```
+  
+  Or, simply use `count`, which makes more sense in my opinion
+ 
+```{r}
+gapminder %>% 
+  group_by(continent) %>% 
+  count()
+```
+
+  **b) number of countries per continent (use `n_distinct` inside `summarize` to count the number of distinct observations)**
+ 
+```{r}
+gapminder %>% 
+  group_by(continent) %>% 
+  count(countries_per_continent = n_distinct(country))
+```
+
+  **c) average life expectancy by continent**
+ 
+```{r}
+gapminder %>% 
+  group_by(continent) %>% 
+  summarise(avg_lifeExp = mean(lifeExp))
+```
+
+  **d) minimum and maximum life expectancies seen by year in Asia**
+ 
+```{r}
+gapminder %>% 
+  group_by(year) %>% 
+  filter(continent == "Asia") %>% 
+  summarise(min_lifeExp = min(lifeExp), max_lifeExp = max(lifeExp))
+```
+
+**Question 12 - Sometimes you do not want to collapse the `n`rows for each group into one row. That is, you don’t want to use `summarize` but `mutate` within your groups. Try to make a new variable that is the years of life expectancy gained (lost) relative to 1952, for each individual country. **
+
+```{r}
+gapminder %>% 
+  group_by(country) %>% 
+  select(country, year, lifeExp) %>% # relevant variables
+  arrange(year, .by_group = TRUE) %>% # unnecessary but good practice
+  mutate(delta_lifeExp = lifeExp - first(lifeExp)) # %>% print(n=Inf)
+```
+
+**Question 13 - Which country experienced the sharpest 5-year drop in life expectancy in each continent? Recall that the Gapminder data only has data every five years, e.g. for 1952, 1957, etc. So this really means looking at life expectancy changes between adjacent timepoints.**
+
+```{r}
+# First group by continent and add delta_lifeExp to look at changes in lifeExp
+gapminder %>% 
+  group_by(continent) %>% 
+  select(continent, country, year, lifeExp) %>% # relevant variables, continent first for better readability
+  mutate(delta_lifeExp = lifeExp - lag(lifeExp)) %>%  # delta looks at the difference with previous timepoint
+         
+# Then filter out the year 1952 (first observation), as the delta will be very low but a meaningless value
+  filter(year > 1952) %>% 
+
+# Then use slice_min() to select the lowest observation (sharpest drop) from delta_lifeExp and sort ascending
+  slice_min(delta_lifeExp) %>%  # I would use top_n() as learnt on Datacamp, but its documentation points to slice_min()
+  arrange(delta_lifeExp)
+```
+
+Interpretation: Results show that Oceania had no drops in life expactancy since 1952, the continent has only 2 countries though.
+
+Teacher has a slightly different method, shown here:
+```{r}
+gapminder %>%
+  select(country, year, continent, lifeExp) %>%     
+  group_by(continent, country) %>%                  
+  mutate(le_delta = lifeExp - lag(lifeExp)) %>%
+  summarize(worst_le_delta = min(le_delta, na.rm = TRUE)) %>%
+  slice_min(worst_le_delta) %>%
+  arrange(worst_le_delta)
+```
+
+
+# Exercise 8.5.2 - Babynames
+
+The package babynames contains the dataset `babynames` provided by the U.S Social Security Administration. For each year from 1880 to 2017, the number of children of each sex given each name. All names with more than 5 uses are given (source: http://www.ssa.gov/oact/babynames/limits.html).
+
+Install it using
+
+```{r}
+install.packages("babynames")
+```
+
+We will use the skimr package to get an overview over babynames:
+
+```{r}
+library(babynames)
+library(skimr)
+skim(babynames)
+```
+
+**Question 1 - Which of these is NOT a way to select the name and n columns together?**
+
+```{r eval=FALSE}
+select(babynames, -c(year, sex, prop))
+select(babynames, name:n)
+select(babynames, starts_with("n"))
+select(babynames, ends_with("n"))
+```
+
+The last option only selects `n`.
+
+
+**Question 2 - Use `filter` and the logical operators to find:**
+
+  **a) all of the names where prop is greater than or equal to 0.08**
+
+```{r}
+babynames %>% 
+  filter(prop >= 0.08)
+```
+
+  **b) all of the children named “Sea”**
+
+```{r}
+babynames %>% 
+  filter(name == "Sea")
+```
+
+**Question 3 - Use Boolean operators to return only the rows that contain:**
+
+  **a) boys named Sue**
+  
+```{r}
+babynames %>% 
+  filter(name == "Sue", sex == "M")
+```
+
+   **b) names that were used by exactly 5 or 6 children in 1880**
+   
+```{r}
+babynames %>%
+  filter(year == 1880, n %in% c(5:6))
+```
+
+   **c) names that are one of Acura, Lexus, or Yugo**
+
+```{r}
+babynames %>%
+  filter(name %in% c("Acura", "Lexus", "Yugo"))
+```
+
+
+**Question 4 - What is the smallest value of `n`? What is the largest?**
+
+```{r}
+babynames %>%
+  slice_max(n)
+
+babynames %>% 
+  slice_min(n)
+```
+
+Smallest value = 5
+Largest value = 99,686
+
+
+**Question 5 - Write a sequence of functions that filters babynames to just the girls that were born in 2017, then select the `name` and `n` columns, then arrange the results so that the most popular names are near the top.**
+
+```{r}
+babynames %>%
+  filter(sex == "F", year == 2017) %>% 
+  select(name, n) %>% 
+  arrange(desc(n))
+```
+
+
+**Question 6 - Trim `babynames` to just the rows that contain your `name` and your `sex`.**
+
+```{r}
+babynames %>%
+  filter(sex == "M", name == "Gillian")
+```
+
+Very low numbers haha.
+
+**Question 7 - Extract the rows where `name == "Khaleesi"`. Then use `summarise()` to find the total number of children named Khaleesi and the first year Khaleesi appeared in the data.**
+
+```{r}
+babynames %>%
+  filter(name == "Khaleesi") %>% 
+  summarise(total = sum(n), first_year = min(year))
+```
+
+**Question 8 - Use `group_by()`, `summarise()`, and `arrange()` to display the ten most popular names. Compute popularity as the total number of children of a single gender given a name.**
+
+```{r}
+babynames %>%
+  group_by(name, sex) %>% 
+  summarise(total = sum(n)) %>% 
+  arrange(desc(total))
+```
+
+
+**Question 9 - Use `group_by()` to calculate the total number of children born each year over time.**
+
+```{r}
+babynames %>%
+  group_by(year) %>% 
+  summarise(total = sum(n))
+```
+
+
+**Question 10 - Column `prop` denotes the proportion given year and sex. Use `mutate()` and `min_rank()` to rank each row in babynames from largest `prop` to lowest `prop` given year and sex. What happens if you do the same using the `n` column?**
+
+```{r}
+# rank on prop
+babynames %>%
+  group_by(year, sex) %>% 
+  mutate(rank = min_rank(desc(prop))) %>% 
+  arrange(year, sex, rank)
+
+# rank on n
+babynames %>%
+  group_by(year, sex) %>% 
+  mutate(rank = min_rank(desc(n))) %>% 
+  arrange(year, sex, rank)
+```
+
+Naturally, ranking on `prop` or `n` yields the same result. Higher numbers mean higher proportions (at lest for the early year -- i.e. 1880 as shown here -- with slow increasing population numbers.
+
+
+**Question 11 - Filter the results to find all names with `rank == 1` after 2009.**
+
+```{r}
+babynames %>%
+  group_by(year, sex) %>% 
+  mutate(rank = min_rank(desc(n))) %>% 
+  filter(rank == 1, year > 2009)
+```
+
+This essentially shows the most popular boy and girl names for all years since 2010.
+
+
+# Exercise 8.5.3 - Profit
+
+Consider the dataset profit containing quarterly financial records for each costumer, product, etc.:
+
+```{r}
+library(skimr)
+path <- system.file("extdata/profit_raw.csv", package = "tfa")
+profit <- read_csv(path)
+skim(profit)
+```
+Note that it seems that the dataset need to be cleaned. All columns are strings (some should be numbers) and there seems to be missing values. You may start by having a view of the dataset using:
+
+```{r}
+view(profit)
+```
+
+First focus on column Quarter which currently has 12 distinct values:
+
+```{r}
+profit %>% distinct(Quarter)
+```
+
+You would like it to be a numeric with values 1-4.
+
+  **Question 1 - Use `mutate`, `str_remove` and `as.numeric` to convert the column to a numeric by removing all ‘q’ and ‘Q’ values.**
+
+```{r}
+profit <- profit %>% 
+  mutate(Quarter = str_remove(Quarter, "q")%>%
+           str_remove("Q") %>%
+           as.numeric())
+profit %>% distinct(Quarter)
+```
+
+Let us look at the next columns:
+
+```{r}
+profit %>% distinct(Channel) %>% pull()
+
+profit %>% distinct(`Customer ID`) %>% pull()
+
+profit %>% distinct(Country) %>% pull()
+
+profit %>% distinct(`Product Line`) %>% pull()
+```
+
+These seem to be okay. The last columns should be numbers. Let us consider Revenue.
+
+```{r}
+profit %>% distinct(Revenue) %>% pull() %>% head(n = 100)
+```
+
+Most values start with a dollar sign. Let us have a look at the other ones:
+
+```{r}
+profit %>% filter(!str_starts(Revenue, fixed("$"))) 
+```
+
+The expression is a bit complex. Let us break it up. Function `fixed` just returns the fixed string ‘$’. This is necessary since the dollar sign has a special meaning in regular expressions (beyond the scope here). Function `str_starts` checks if the string starts with a dollar sign. We use the logical negation (NOT) to find the complementary set.
+
+Note that different strings have been used to indicate `NA` values (Unknown, ?, unknown). Let us first use a single value to indicate `NA` (a question mark):
+
+```{r}
+profit <- profit %>% 
+  mutate(Revenue = str_replace_all(Revenue, c("unknown" = "?", "Unknown" = "?")))
+```
+
+Next, we replace all `?` with `NA` (function `na_if` only takes one input to replace I think, so that's why we didn't just input "unknown" and "Unknown" in there from the start):
+
+```{r}
+profit <- profit %>% 
+  mutate(Revenue = na_if(Revenue, "?"))
+profit %>% # check
+  filter(!str_starts(Revenue, fixed("$"))) 
+```
+
+Finally, we remove all dollar signs:
+
+```{r}
+profit <- profit %>% 
+  mutate(Revenue = str_remove(Revenue, fixed("$ ")) %>% as.numeric())
+profit
+```
+
+As one pipe:
+
+```{r}
+profit <- profit %>% 
+  mutate(Revenue = str_replace_all(Revenue, c("unknown" = "?", "Unknown" = "?"))) %>% 
+  mutate(Revenue = na_if(Revenue, "?")) %>% 
+  mutate(Revenue = str_remove(Revenue, fixed("$ ")) %>% as.numeric())
+```
+
+**Question 2 - Convert the remaining columns to numeric like shown for `Revenue` above.**
+```{r}
+profit <- profit %>% 
+  mutate(`Product Cost` = str_replace_all(`Product Cost`, c("unknown" = "?", "Unknown" = "?"))) %>% 
+  mutate(`Product Cost` = na_if(`Product Cost`, "?")) %>% 
+  mutate(`Product Cost` = str_remove(`Product Cost`, fixed("$ ")) %>% as.numeric())
+
+profit <- profit %>% 
+  mutate(`Customer Service Cost` = str_replace_all(`Customer Service Cost`, c("unknown" = "?", "Unknown" = "?"))) %>% 
+  mutate(`Customer Service Cost` = na_if(`Customer Service Cost`, "?")) %>% 
+  mutate(`Customer Service Cost` = str_remove(`Customer Service Cost`, fixed("$ ")) %>% as.numeric())
+
+profit <- profit %>% 
+  mutate(Profit = str_replace_all(Profit, c("unknown" = "?", "Unknown" = "?"))) %>% 
+  mutate(Profit = na_if(Profit, "?")) %>% 
+  mutate(Profit = str_remove(Profit, fixed("$ ")) %>% as.numeric())
+
+profit
+```
+
+
+**Question 3 - Use the `across` function to apply the operations in Question 2 for a set of columns. Hint: see the examples on the help page of across.**
+
+```{r}
+?across
+
+profit <- profit %>% 
+  mutate(across(Revenue:Profit, ~str_replace_all(Profit, c("unknown" = "?", "Unknown" = "?")))) %>% 
+  mutate(across(Revenue:Profit, ~na_if(Profit, "?"))) %>% 
+  mutate(across(Revenue:Profit, ~str_remove(Profit, fixed("$ ")) %>% as.numeric()))
+profit
+```
+
+
+**Question 4 - Write one pipe that does all the cleaning.**
+
+```{r}
+profit <- profit %>% 
+  mutate(Quarter = str_remove(Quarter, "q") %>%
+           str_remove("Q") %>%
+           as.numeric()) %>% 
+  mutate(across(Revenue:Profit, ~str_replace_all(.x, c("unknown" = "?", "Unknown" = "?")))) %>% 
+  mutate(across(Revenue:Profit, ~na_if(.x, "?"))) %>% 
+  mutate(across(Revenue:Profit, ~str_remove(.x, fixed("$ ")) %>% as.numeric()))
+profit
+```
+
+
+**Question 5 - Validate that revenue - product costs - customer service cost equals profit. If you see small rounding errors (less than or equal one) then recalculate the profit.**
+
+```{r}
+profit <- profit %>% 
+  mutate(profit_calc = Revenue - `Product Cost` - `Customer Service Cost`,
+         rounding_error = abs(Profit - profit_calc)) %>% 
+  mutate(Profit = if_else(rounding_error > 0 & rounding_error <= 1, profit_calc, Profit, missing = Profit))
+
+profit %>% filter(rounding_error == 1, is.na(profit_calc)) # checking rounding errors or missing profit
+```
+
+
+**Question 6 - Recalculate values in columns Revenue to Profit if possible.**
+
+Well this seems nonsensical. I'd just do `mutate(Revenue = Profit)`...? But I guess he wants something else...
+
+```{r}
+profit1 <- profit %>% 
+  mutate(Revenue = Profit)
+profit1
+```
+
+So after reading the solution, I rewrote the question so that it actually makes sense...:
+
+**Question 6 - Knowing that `Profit = Revenue - Product Costs - Customer Service Costs`, you can calculate any missing or `NA` in these columns, as long as the 3 other columns are not `NA`. Do that here:**
+
+This here then is the provided solution, not mine. Added some comments for readability:
+
+```{r}
+# This chunk counts NA values for each row. Then it recalculates NA values if it is the only NA value in that column
+profit <- profit %>% 
+  rowwise() %>% 
+  mutate(c_na = sum(is.na(c_across(Revenue:Profit)))) %>% 
+  mutate(Revenue = if_else(is.na(Revenue) & c_na == 1, 
+                           Profit + `Product Cost` + `Customer Service Cost`, 
+                           Revenue, Revenue),
+         `Product Cost` = if_else(is.na(`Product Cost`) & c_na == 1,
+                                  - Profit + Revenue - `Customer Service Cost`,
+                                  `Product Cost`), 
+         `Customer Service Cost` = if_else(is.na(`Customer Service Cost`) & c_na == 1,
+                                           - Profit + Revenue - `Product Cost`,
+                                           `Customer Service Cost`)) %>% 
+  select(Quarter:Profit)
+profit
+
+# check - do numbers match
+profit %>% 
+  mutate(Profit_calc = Revenue - `Product Cost` - `Customer Service Cost`, Diff = abs(Profit - Profit_calc)) %>%  
+  filter(Diff > 0)
+
+# check - find NA values - see if all NA values were recalculated
+profit %>% 
+  rowwise() %>% 
+  mutate(c_na = sum(is.na(c_across(Revenue:Profit)))) %>% 
+  filter(c_na > 0)
+# 3 rows had NA values in multiple columns and so could not be recalculated
+```
+
+
+**Question 7 - Find the two best rows with highest profit in each quarter.**
+
+```{r}
+profit %>% 
+  group_by(Quarter) %>% 
+  slice_max(Profit, n = 2)
+```
+
+
+**Question 8 - Find the two best customers with highest profit in each quarter. Is the result the same as in Question 7?**
+
+```{r}
+profit %>% 
+  group_by(Quarter, `Customer ID`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  slice_max(Profit, n = 2)
+
+#compare with previous exercise
+profit %>% 
+  select(Quarter, `Customer ID`, Profit) %>% 
+  group_by(Quarter) %>% 
+  slice_max(Profit, n = 2)
+```
+
+For some customers it's the same but mostly not.
+
+
+**Question 9 - Find the product line, customer, channel, country and quarter with the highest profit.**
+
+```{r}
+# Product line
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  slice_max(Profit)
+
+# Customer
+profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  slice_max(Profit)
+
+# Channel
+profit %>% 
+  group_by(Channel) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  slice_max(Profit)
+
+# Country
+profit %>% 
+  group_by(Country) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  slice_max(Profit)
+
+# Quarter
+profit %>% 
+  group_by(Quarter) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  slice_max(Profit)
+
+```
+
+
+**Question 10 - Are there rows with the same customer in different countries?**
+
+```{r}
+profit %>% 
+  group_by(`Customer ID`) %>% 
+  distinct(Country) %>% 
+  count(`Customer ID`)
+```
+
+
+**Question 11 - Sort the data decreasing with respect to profit and next revenue.**
+
+```{r}
+profit %>% 
+  arrange(desc(Profit), desc(Revenue))
+```
+
+
+**Question 12 - Which product lines have the highest and lowest total cost?**
+```{r}
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(TotalCost = sum(`Product Cost` + `Customer Service Cost`)) %>% 
+  slice_max(TotalCost)
+
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(TotalCost = sum(`Product Cost` + `Customer Service Cost`)) %>% 
+  slice_min(TotalCost)
+```
+Highest cost - Credit Products with $820,665
+Lowest cost - Third Party Products with $107,766
+
+
+**Question 13 - Assume that customer service cost increases with 5%. How will that affect the profit for each product line?**
+
+My solution:
+
+```{r}
+old_profit <- profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(OldProfit = sum(Profit))
+
+new_profit <- profit %>% 
+  mutate(`Customer Service Cost` = `Customer Service Cost` * 1.05) %>% 
+  group_by(`Product Line`) %>% 
+  summarise(NewProfit = sum(Revenue - `Customer Service Cost` - `Product Cost`)) %>% 
+  select(NewProfit)
+
+cbind(old_profit, new_profit)
+```
+
+Teacher solution:
+
+```{r}
+profit %>%
+  mutate(cust_cost_new = `Customer Service Cost` * 1.05, 
+         profit_new = Revenue - cust_cost_new - `Product Cost`) %>% 
+  group_by(`Product Line`) %>% 
+  summarise(cust_cost = sum(`Customer Service Cost`), profit = sum(Profit), 
+            cust_cost_new = sum(cust_cost_new), profit_new = sum(profit_new),
+            profit_decrease = profit_new - profit)
+```
+
+## Colophon 
+<!-- Always keep this section for reproducibility -->
+
+This report has been created inside [RStudio](http://www.rstudio.com/ide/) using [R Markdown](https://rmarkdown.rstudio.com/). 
+
+The report was built using:
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+session <- devtools::session_info()
+session$platform
+```
+
+Along with these packages:
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+session$packages %>% 
+  select(package, loadedversion, date, source) %>% 
+  DT::datatable(rownames = FALSE,
+                class = 'cell-border stripe',
+                filter = list(position = 'top'),
+                options = list(pageLength = 5, 
+                           autoWidth = FALSE,
+                           bInfo = FALSE,
+                           paging = TRUE))
+```
+
+
+
+
+
+
+
+
