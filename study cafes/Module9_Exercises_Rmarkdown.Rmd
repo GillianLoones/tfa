@@ -2,7 +2,6 @@
 title: "Exercises Module 8"
 author:
   - name: Gillian Loones
-    affiliation: MSc IM
 output: 
   html_document:
     toc: true
@@ -380,6 +379,333 @@ We now see that the rich countries have become a bit richer, but percentage-wise
 
 
 ## Exercise 9.7.2 - Profit
+
+Consider the dataset profit (provided by the tfa package) containing quarterly financial records for each costumer, product, etc.:
+
+```{r}
+# remotes::install_github("bss-osca/tfa/tfa-package", upgrade = FALSE)   # upgrade first
+library(tfa)
+library(skimr)
+glimpse(profit)
+skim(profit)
+```
+
+**Question 1 - Make a barplot that shows the total profitability of the product lines. Use the following steps:**
+  
+  **a) Convert all character columns to factor columns.**
+  
+```{r}
+# Took me long to get this right lol. It's in the ~ and the .x
+profit <- profit %>% 
+  mutate(across(Channel:`Product Line`, ~as.factor(.x))) 
+
+# Alternatively, found this in across function documentation
+profit <- profit %>% 
+  mutate(across(where(is_character), as.factor)
+
+glimpse(profit)
+```
+
+  **b) Group by product line, calculate the total profit and plot profit for each product line.**
+  
+```{r}
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = `Product Line`, y = Profit)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90))
+
+#Teacher solution (ouch those axis labels)
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = `Product Line`, y = Profit)) +
+  geom_col()
+```
+
+  **c) Plot profit for each product line where product line is reordered based on total profit.**
+  
+```{r}
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Product Line`, -Profit), y = Profit)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+  **d) Add a title to the plot using labs.**
+  
+```{r}
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Product Line`, -Profit), y = Profit)) +
+  geom_col() +
+  labs(title = "Total profit for each product line")
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+  **e) Rotate the x-axis labels 90 degrees.**
+  
+```{r}
+# Ah here it is finally....
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Product Line`, -Profit), y = Profit)) +
+  geom_col() +
+  labs(title = "Total profit for each product line") +
+  xlab("Product line") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+  **f) Which product line is best and worst?**
+
+* Best - Credit Products
+* Worst - Third Party Products
+
+Same conclusion as Module 8 (duh).
+
+
+**Question 2 - Make a barplot that shows the total profitability of the product lines in each quarter. Are there details we have missed in Question 1?**
+
+```{r}
+profit %>% 
+  group_by(`Product Line`, Quarter) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Product Line`, -Profit), y = Profit, fill = Quarter)) +
+  geom_col() +
+  labs(title = "Total profit for each product line") +
+  xlab("Product line") +
+  facet_grid(cols = vars(Quarter)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+Quarter seems to significantly the profit of some product lines.
+
+**Question 3 - Make a boxplot of profitability of the product lines. Any insight?**
+
+```{r}
+profit %>% 
+  ggplot(aes(x = `Product Line`, y = Profit)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+Three of the six lines have quite some variability in their profitability.
+
+**Question 4 - Make a barplot that shows the total profitability of the customers. Which customer is best and worst?**
+
+```{r}
+profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Customer ID`, -Profit), y = Profit)) +
+  geom_col() +
+  xlab("Customer ID") +
+  labs(title = "Total profit per customer")
+```
+
+* Best customer - WEM
+* Worst customer - PBI (by a lot lol)
+
+
+**Question 5 - Make a barplot that shows the mean profitability of the customers. Which customer is best and worst? Compare against Question 4 and discuss.**
+
+```{r}
+library(patchwork)
+
+# Mean profit
+p1 <- profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Profit = mean(Profit)) %>% 
+  ggplot(aes(x = reorder(`Customer ID`, -Profit), y = Profit)) +
+  geom_col() +
+  xlab("Customer ID") +
+  labs(title = "Mean profit per customer") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+# Total profit (previous question)
+p2 <- profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Customer ID`, -Profit), y = Profit)) +
+  geom_col() +
+  xlab("Customer ID") +
+  labs(title = "Total profit per customer") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+p1 / p2
+```
+
+* Best - INB
+* Worst - IAS
+
+Different from best & worst total profitable customers
+
+
+**Question 6 - Make a plot illustrating number of transactions for each customer. Use total profit as fill atheistic.**
+
+```{r}
+profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Transactions = n(), Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Customer ID`, -Transactions), y = Transactions, fill = Profit)) +
+  geom_col() +
+  xlab("Customer ID") +
+  labs(title = "Number of transactions per customer")
+```
+
+
+**Question 7 - Make a boxplot illustrating the profit for each customer.**
+
+```{r}
+profit %>% 
+  ggplot(aes(x = `Customer ID`, y = Profit)) +
+  geom_boxplot() +
+  labs(title = "Profit per customer")
+```
+
+
+
+## Exercise 9.7.3 - COVID 19
+
+Countries around the world are responding to an outbreak of respiratory illness caused by a novel corona virus, COVID-19. The outbreak first started in Wuhan, China, but cases have been identified in a growing number of other locations internationally, including the United States. In this report we explore how the trajectory of the cumulative deaths in a number of countries.
+
+The data come from the coronavirus package, which pulls data from the Johns Hopkins University Center for Systems Science and Engineering (JHU CCSE) Corona virus repository. The corona virus package provides a tidy format dataset of the 2019 Novel Corona virus COVID-19 (2019-nCoV) epidemic. The package is available on GitHub here and is updated daily.
+
+First load the following packages:
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(tfa)
+
+# devtools::install_github("RamiKrispin/coronavirus", dependencies = FALSE)
+library(coronavirus) 
+library(lubridate)   # package for handling dates
+```
+
+The data frame called `coronavirus` in the coronavirus package provides a daily summary of the Corona virus (COVID-19) cases by country. Each row in the data frame represents a country (or, where relevant, state/province). Note that the data provided in this package provides daily number of deaths, confirmed cases, and recovered cases. We calculate the total number of cases per day, cumulative numbers and days since first record:
+
+```{r}
+dat <- coronavirus %>%
+  group_by(country, date, type) %>% 
+  summarise(tot_cases = sum(cases)) %>%
+  group_by(country, type) %>% 
+  arrange(date) %>%
+  mutate(cumulative_cases = cumsum(tot_cases)) %>%
+  ungroup() %>%
+  mutate(
+    days_elapsed = as.numeric(date - min(date)),
+    year = year(date)
+  ) %>% print()
+```
+
+**Question 1 - Calculate and plot the number of confirmed, death and recovered cases per day given date using `facet_grid` and `geom_col`.**
+
+```{r}
+dat %>% 
+  group_by(date, type) %>% 
+  summarise(tot_cases = sum(tot_cases)) %>% 
+  ggplot(aes(x = date, y = tot_cases)) +
+  geom_col() +
+  facet_grid(rows = vars(type)) +
+  labs(title = "Total number of COVID-19 cases per day") +
+  ylab("Cases")
+
+# Now the middle one is useless, so adjust scaling in facet_grid
+
+dat %>% 
+  group_by(date, type) %>% 
+  summarise(tot_cases = sum(tot_cases)) %>% 
+  ggplot(aes(x = date, y = tot_cases)) +
+  geom_col() +
+  facet_grid(rows = vars(type), scales = "free_y") +
+  labs(title = "Total number of COVID-19 cases per day") +
+  ylab("Cases")
+```
+
+Consider the following set of countries:
+
+```{r}
+countries <- c(
+  "China",
+  "France",
+  "Denmark",
+  "US",
+  "Italy"
+)
+```
+
+**Question 2 - Plot a line plot of the cumulative number of deaths as a function of days elapsed for the selected countries. Use country as color aesthetic.**
+
+```{r}
+dat %>% 
+  filter(country %in% countries, type == "death") %>% 
+  ggplot(aes(x = days_elapsed, y = cumulative_cases, color = country)) +
+  geom_line() +
+  labs(title = "Cumulative COVID-19 deaths for selected countries") +
+  xlab(str_c("Days elapsed since ", min(dat$date))) +
+  ylab("Cumulative deaths")
+```
+
+Since the countries have different population sizes we would like to calculate some numbers relative to the population size. First we need population sizes for each country. They are given in the dataset `world_pop` in the tfa package:
+
+```{r}
+world_pop <- tfa::world_pop %>%
+  filter(country %in% countries) %>% 
+  print()
+```
+
+We can join the datasets using:
+
+```{r}
+dat <- dat %>% 
+  filter(country %in% countries) %>% 
+  left_join(world_pop) %>% 
+  print()
+```
+
+
+**Question 3 - Calculate `tot_cases_pop` as number of cases per 100,000 inhabitants. That is, total cases divided by population and multiplied by 100,000.**
+
+```{r}
+dat <- dat %>% 
+  mutate(tot_cases_pop = 100000 * tot_cases / pop)
+dat
+```
+
+
+**Question 4 - Plot the number of confirmed cases per 100,000 inhabitants for the last 21 days. Use country as fill aesthetic.**
+
+```{r}
+dat %>%
+  filter(days_elapsed >= max(days_elapsed) - 21, # teacher: date >= today() - days(21)
+         type == "confirmed") %>%
+  ggplot(aes(x = date, y = tot_cases_pop, fill = country)) +
+  geom_col() + # teacher used argument: position = position_dodge2()
+  labs(title = "Confirmed cases per day", 
+       y = "Number of confirmed cases per 100,000 inhabitants")
+```
+
+
+**Question 5 - Plot the number of confirmed cases per 100000 inhabitants in Denmark for the last 14 days.**
+
+```{r}
+dat %>%
+  filter(days_elapsed > max(days_elapsed) - 14, # teacher: date >= today() - days(21)
+         type == "confirmed",
+         country == "Denmark") %>%
+  ggplot(aes(x = date, y = tot_cases_pop)) +
+  geom_col() +
+  labs(title = "Denmark: confirmed cases per day per 100,000 inhabitants", 
+       y = "Confirmed cases per 100,000 inhabitants")
+```
+
+
 
 ## Colophon 
 <!-- Always keep this section for reproducibility -->
