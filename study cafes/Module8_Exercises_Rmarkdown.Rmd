@@ -38,6 +38,8 @@ library(tfa)
 ```
 
 
+
+
 ## Exercise 8.5.1 - Gapminder
 
 The  gapminder data set provides values for life expectancy, GDP per capita, and population, every five years, from 1952 to 2007 for 142 countries. The data can be loaded using the gapminder package:
@@ -299,7 +301,9 @@ gapminder %>%
 ```
 
 
-# Exercise 8.5.2 - Babynames
+
+
+## Exercise 8.5.2 - Babynames
 
 The package babynames contains the dataset `babynames` provided by the U.S Social Security Administration. For each year from 1880 to 2017, the number of children of each sex given each name. All names with more than 5 uses are given (source: http://www.ssa.gov/oact/babynames/limits.html).
 
@@ -460,7 +464,9 @@ babynames %>%
 This essentially shows the most popular boy and girl names for all years since 2010.
 
 
-# Exercise 8.5.3 - Profit
+
+
+## Exercise 8.5.3 - Profit
 
 Consider the dataset profit containing quarterly financial records for each costumer, product, etc.:
 
@@ -786,6 +792,139 @@ profit %>%
             cust_cost_new = sum(cust_cost_new), profit_new = sum(profit_new),
             profit_decrease = profit_new - profit)
 ```
+
+
+
+
+## Exercise 8.5.4 - Fisheries
+
+The dataset called fisheries contains worldwide fishery harvests for 2005. The tonnage from capture and aquaculture is listed by country.
+
+You need the tidyverse package as usual:
+
+```{r}
+library(tidyverse)
+```
+
+We load the needed datasets:
+
+```{r}
+fisheries <- read_csv("https://raw.githubusercontent.com/rstudio-education/datascience-box/master/course-materials/application-exercises/ae-05-fisheries-datajoins/data/fisheries.csv")
+fisheries
+
+continents <- read_csv("https://raw.githubusercontent.com/rstudio-education/datascience-box/master/course-materials/application-exercises/ae-05-fisheries-datajoins/data/continents.csv")
+continents
+```
+
+Some mean statistics:
+
+```{r}
+fisheries %>%
+  summarise(across(is.numeric, mean, na.rm = TRUE))
+```
+
+**Question 1 - Use a mutating join to add a continent column to the `fisheries` dataset. Are there some countries which do not belong to a continent?**
+
+```{r}
+# Countries not belonging to a continent
+fisheries %>% 
+  anti_join(continents)
+
+# Join
+fisheries <- fisheries %>% 
+  left_join(continents)
+fisheries
+```
+
+**Question 2 - Filter out countries whose total harvest was less than 100,000 tons.**
+
+```{r}
+# Assuming total harvest = capture + aquaculture
+fisheries_1 <- fisheries %>% 
+  filter(capture + aquaculture > 100000) %>% print()
+
+# Ok I didn't see the Total column lol
+fisheries_1 <- fisheries %>% 
+  filter(total > 100000) %>% print()
+```
+
+**Question 3 - If still any countries not belonging to a continent then add them to the closest continent.**
+
+```{r}
+fisheries_1 %>% 
+  filter(is.na(continent)) # just 3 countries => we can do it manually
+
+fisheries_1 <- fisheries_1 %>% 
+  mutate(continent = case_when(
+    country == "Democratic Republic of the Congo" ~ "Africa", 
+    country %in% c("Hong Kong", "Myanmar")        ~ "Asia",
+    TRUE                                          ~ continent
+    )
+  ) %>% print()
+```
+
+**Question 4 - Add column `aquaculture_perc = aquaculture / total` and explain the variable.**
+
+```{r}
+fisheries_1 <- fisheries_1 %>% 
+  mutate(aquaculture_perc = aquaculture / total) %>% print() # share of aquaculture in the total harvest
+```
+
+**Question 5 - Calculate the mean aquaculture percentage (we’ll call it `mean_ap` for short) for continents in the fisheries data.**
+
+```{r}
+fisheries_1 %>% 
+  group_by(continent) %>% 
+  summarise(mean_ap = round(mean(aquaculture_perc), 4))
+```
+
+
+**Question 6 - Now expand your calculations to also calculate the minimum and maximum aquaculture percentage for continents in the fisheries data and store the summary table in a data frame called `fisheries_summary_continent`.**
+
+```{r}
+fisheries_summary_continent <- fisheries_1 %>% 
+  group_by(continent) %>% 
+  summarise(mean_ap = round(mean(aquaculture_perc), 4),
+            min_ap = round(min(aquaculture_perc), 4),
+            max_ap = round(max(aquaculture_perc), 4)
+            ) %>% print()
+```
+
+**Question 7 - Take the `fisheries_summary_continent` data frame and order the results in descending order of mean aquaculture percentage.**
+
+```{r}
+fisheries_summary_continent <- fisheries_summary_continent %>% 
+  arrange(desc(mean_ap)) %>% print()
+```
+
+**Question 8 - If you already have read the module about visualizations, then try to make some relevant plots.**
+
+```{r}
+library(ggthemes)
+
+fisheries_1 %>% # pretty useless plot lol
+  ggplot(aes(x = reorder(country, -total), y = total)) +
+  geom_col() +
+  theme_fivethirtyeight() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  labs(title = "total harvest by country", 
+       x = "country", 
+       y = "harvest"
+       )
+  
+fisheries_summary_continent %>% 
+  ggplot(aes(x = reorder(continent, -mean_ap), y = mean_ap)) +
+  geom_col() +
+  theme_fivethirtyeight() +
+  scale_color_gdocs() +
+  labs(title = "Average share of aquaculture",
+       subtitle = "In total fish harvest by continent", 
+       x = "continent", 
+       y = "harvest"
+       )
+```
+
+
 
 ## Colophon 
 <!-- Always keep this section for reproducibility -->
