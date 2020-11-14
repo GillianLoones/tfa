@@ -401,7 +401,7 @@ profit <- profit %>%
 
 # Alternatively, found this in across function documentation
 profit <- profit %>% 
-  mutate(across(where(is_character), as.factor)
+  mutate(across(where(is_character), as.factor))
 
 glimpse(profit)
 ```
@@ -704,6 +704,165 @@ dat %>%
   labs(title = "Denmark: confirmed cases per day per 100,000 inhabitants", 
        y = "Confirmed cases per 100,000 inhabitants")
 ```
+
+
+
+## Exercise 9.7.4 - LEGO and sales
+
+Consider (simulated) data of Lego sales in 2018 for a sample of customers who bought legos in the US. The dataset is called `lego_sales`. You can find descriptions of each of the variables in the help file for the dataset, which you can access by running `?lego_sales` in your Console.
+
+You need the `tidyverse` package as usual and the `dsbox` package for the data.
+
+```{r}
+library(tidyverse)
+library(dsbox)   # devtools::install_github("rstudio-education/dsbox")
+
+?lego_sales
+view(lego_sales)
+glimpse(lego_sales)
+str(lego_sales)
+```
+
+Answer the following questions using a table with numbers and try to visualize it. For each question, state your answer in a sentence, e.g. “The first three common names of purchasers are …”.
+
+**Question 1 - What are the three most common first names of purchasers?**
+
+```{r}
+tbl1 <- lego_sales %>% 
+  group_by(first_name) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n)) %>% print()
+
+tbl1 %>% 
+  slice_head(n = 20) %>% 
+  ggplot(aes(x = n, y = reorder(first_name, n))) +
+  geom_col() +
+  labs(title = "20 most common first names", 
+       subtitle = "Out of people who buy LEGO", 
+       x = "count", 
+       y = "first name")
+```
+
+The three most common first names among LEGO purchasers are "Jackson", "Jacob", and "Joseph". All three with a J, coincidentally...
+
+
+**Question 2 - What are the three most common themes of Lego sets purchased?**
+
+```{r}
+tbl2 <- lego_sales %>% 
+  group_by(theme) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n)) %>% print()
+
+tbl2 %>% 
+  ggplot(aes(x = n, y = reorder(theme, n))) +
+  geom_col() +
+  labs(title = "25 most common LEGO themes", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "count", 
+       y = "theme")
+```
+
+The three most common LEGO themes are "Star Wars", "Nexo Knights", and "Mixels".
+
+
+**Question 3 - Among the most common theme of lego sets purchased, what is the most common subtheme?**
+
+```{r}
+tbl3 <- lego_sales %>% 
+  filter(theme == "Star Wars") %>% 
+  group_by(subtheme) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n)) %>% print()
+
+tbl3 %>% 
+  ggplot(aes(x = n, y = reorder(subtheme, n))) +
+  geom_col() +
+  labs(title = "11 most common Star Wars LEGO themes", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "count", 
+       y = "theme")
+```
+
+The three most common LEGO Star War themes are "The Force Awakens", "Buildable Figures", and "MicroFighters".
+
+
+**Question 4 - Create a new variable called `age_group` and group the ages into the following categories: “18 and under”, “19 - 25”, “26 - 35”, “36 - 50”, “51 and over”.**
+
+```{r}
+lego_sales <- lego_sales %>% 
+  mutate(age_group = case_when(
+    age <= 18         ~ "18 and under", 
+    age %in% c(19:25) ~ "19 - 25",
+    age %in% c(26:35) ~ "26 - 35",
+    age %in% c(36:50) ~ "36 - 50",
+    age >= 51         ~ "51 and over", 
+    )
+  ) %>% print()
+```
+
+
+**Question 5 - Which age group has purchased the highest number of lego sets.**
+
+```{r}
+tbl5 <- lego_sales %>% 
+  group_by(age_group) %>% 
+  summarise(n = sum(n())) %>% 
+  arrange(desc(n)) %>% print()
+
+tbl5 %>% 
+  ggplot(aes(x = n, y = age_group)) +
+  geom_col() +
+  labs(title = "LEGO purchases by age", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "count", 
+       y = "age group")
+```
+
+The three 'middle' age groups are the most common LEGO purchasers. 36-50, 26-35, and 19-25 respectively.
+
+
+**Question 6 - Which age group has spent the most money on legos?**
+
+```{r}
+tbl6 <- lego_sales %>% 
+  group_by(age_group) %>% 
+  summarise(total_spending = sum(us_price * quantity)) %>% 
+  arrange(desc(total_spending)) %>% print()
+
+tbl6 %>% 
+  ggplot(aes(x = total_spending, y = age_group)) +
+  geom_col() +
+  labs(title = "Total spending on LEGO by age", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "spending in USD", 
+       y = "age group")
+```
+
+This gives the same result as last question. The biggest spenders are in the age group 36-50.
+
+
+**Question 7 - Come up with a question you want to answer using these data, and write it down. Then, create a data visualization that answers the question, and explain how your visualization answers the question.**
+
+Question: "Do LEGO sets purchased by older customers generally contain more pieces (i.e. do older customers buy more complex LEGO sets)?
+
+```{r}
+tbl7 <- lego_sales %>% 
+  filter(!is.na(pieces)) %>% 
+  group_by(age_group) %>% 
+  summarise(avg_pieces = mean(pieces)) %>% print()
+
+tbl7 %>% 
+  ggplot(aes(x = avg_pieces, y = age_group)) +
+  geom_col() +
+  labs(title = "Number of pieces in purchased LEGO sets by age", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "Average number of pieces", 
+       y = "age group")
+```
+
+There doesn't seem to be a significant difference, except that 18 and under typically buy less complex sets, which makes sense in hindsight.
+
 
 
 
