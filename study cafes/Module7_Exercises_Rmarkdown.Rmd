@@ -1,0 +1,393 @@
+---
+title: "Exercises Module 7"
+author:
+  - name: Gillian Loones
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+# set default chunk options
+knitr::opts_chunk$set(
+  echo = TRUE,
+  cache = TRUE,
+  autodep = TRUE
+  )
+```
+
+<!-- Some css for the comments (delete) -->
+```{css, echo=FALSE}
+.comment {
+  color: gold;
+  border-style: dashed;
+  border-width: thin;
+  padding: 10px;
+}
+```
+
+
+## Load packages:
+
+```{r}
+library(tidyverse)
+library(tfa)
+```
+
+
+## Exercise 7.10.1 - Statistikbanken
+
+You can use the API from Statistikbanken to download a lot of data sets. Let us consider airports in Denmark (data set with table id FLYV41):
+
+```{r}
+url <- "https://api.statbank.dk/v1/data/FLYV41/CSV?lang=en&LUFTHAVN=*&Tid=*&Transport=*"
+```
+
+**Question 1 - Use `cat(read_lines(url, n_max = 3), sep = "\n")` to have a look at the delimiter used.**
+
+```{r}
+cat(read_lines(url, n_max = 3), sep = "\n")
+```
+
+
+**Question 2 - Import the csv file.**
+
+```{r}
+airports <- read.csv2(url)
+
+str(airports)
+head(airports)
+glimpse(airports)
+```
+
+
+**Question 3- Try to retrieve information and get an overview over the data by running:**
+
+```{r}
+library(jsonlite)
+url <- "https://api.statbank.dk/v1/tableinfo/FLYV41?lang=en"
+lst <- read_json(url, simplifyVector = T)
+View(lst)
+```
+
+Note the data returned is in json format, so we use `read_json` to read the data into a list.
+
+
+**Question 4 - Create a function `info(tab_id)` that returns a list with components `description`, `unit` and `variables` from the information for a data set with table id `tab_id`.**
+
+```{r}
+info <- function(tab_id) {
+  # FLYV41 is table ID in previous question, so replace that part in the url with function input tab_id
+  url <- str_c("https://api.statbank.dk/v1/tableinfo/", tab_id, "?lang=en")
+  lst <- read_json(url, simplifyVector = T)
+  # For variables, returning only the 1st 2 columns because only they contain relevant information (variable names)
+  return(list(description = lst$description, unit = lst$unit, variables = lst$variables[,1:2]))
+}
+
+info("FLYV41")
+```
+
+
+**Question 5 - Information about all the data sets can be retrieved using:**
+
+```{r}
+url <- "https://api.statbank.dk/v1/tables?lang=en"
+lst <- jsonlite::read_json(url, simplifyVector = T)
+View(lst)
+```
+
+Have a look at FLYV41.
+
+
+Given the information about variables in a data set we can construct the url to retrieve the data in csv format:
+
+```{r}
+tab_id <- "FLYV41"
+url <- str_c("https://api.statbank.dk/v1/tableinfo/", tab_id, "?lang=en")
+lst <- read_json(url, simplifyVector = T) 
+col_id <- c(1,3)  # column ids in lst$variables$id
+cols <- lst$variables$id[col_id]
+url <- str_c("https://api.statbank.dk/v1/data/", tab_id, "/CSV?lang=en&", str_c(cols, collapse = "=*&"), "=*") %>% 
+   URLencode()
+url
+```
+
+**Question 6 - Create a function `get_data(tab_id, col_id)` that retrieve a data set.**
+
+```{r}
+get_data <- function(tab_id, col_id = NULL) {
+  url <- str_c("https://api.statbank.dk/v1/tableinfo/", tab_id, "?lang=en")
+  lst <- read_json(url, simplifyVector = T)
+  cols <- lst$variables$id
+  if (!is.null(col_id)) cols <- cols[col_id]
+  
+  url <- str_c("https://api.statbank.dk/v1/data/", tab_id, "/CSV?lang=en&",
+               str_c(cols, collapse = "=*&"), 
+               "=*") %>% URLencode()
+  
+  dat <- read.csv2(url)
+  return(dat)
+}
+
+get_data("FLYV41", 3)
+get_data("FLYV41", 1:2)
+get_data("FLYV41")
+```
+
+
+
+**Question 7 - Use the function get_data to retrieve data for `tab_id = "FOLK1A"` and `col_id = c(2, 3, 5)` and save it as a csv file with a comma as delimiter.**
+
+```{r}
+dat1 <- get_data("FOLK1A", c(2, 3, 5))
+
+dat1 %>% write.csv(file = "folk1a.csv")
+```
+
+
+**Question 8 - Save the data in an Excel file and a Google sheet.**
+
+```{r}
+library(openxlsx)
+write.xlsx(dat1, file = "folk1a.xlsx")
+
+library(googlesheets4)
+gs4_auth() # doesn't work and can't be bothered to figure out why. Not important.
+gs <- gs4_create("folk1a")
+write_sheet(dat1, ss = gs)
+gs4_browse(gs)  # have a look at the file in a browser
+```
+
+
+
+## Exercise 7.10.2 - Tuples in OPL
+
+In the algebraic modeling language OPL (Optimization Programming Language) used by IBM ILOG CPLEX Optimization Studio, you can define tuples to contain various information. For example consider tuples defined as:
+
+```
+tuple nurse {
+  string name;
+  int experience;   // higest best
+}
+
+tuple shift {
+   string departmentName;
+   string day;
+   int startTime;
+   int endTime;
+}
+```
+
+A `nurse` tuple is then defined as `<"Anne", 11>` and a `shift` tuple as `<“Consultation”, “Monday” 12, 18>`.
+
+A set of tuples can be defined using:
+
+```
+{nurse} nurses = ...;
+{shift} shifts = ...;
+```
+
+where the `...` operator means that the sets are read from a data text file:
+
+```
+nurses = {
+   <"Anne", 11>, 
+   <"Bethanie", 4>, 
+   <"Betsy", 2>
+};
+
+shifts = {
+   <"Emergency", "Monday", 2, 8>,
+   <"Emergency", Monday 8 12 4 7>, 
+   <"Emergency", "Monday" 12 18 2 5> 
+};
+```
+
+You can now use the sets to define decision variables Xns equal one if nurse n is assigned to shift s.
+
+In this exercise we will try to generate the data text file given tibbles with data.
+
+**Question 1 - Try to generate a text file named test.dat using function write_lines with content**
+
+```
+nurses = {
+   <"Anne", 11>
+};
+```
+
+```{r}
+write_lines(x = "nurses = {", path = "test.dat")
+write_lines(x = '<"Anne", 11>', path = "test.dat", append = TRUE)
+write_lines(x = "};", path = "test.dat", append = TRUE)
+
+cat(read_file("test.dat"))
+```
+
+Load datasets:
+
+```{r}
+remotes::install_github("bss-osca/tfa/tfa-package", dependencies = FALSE)
+
+library(tidyverse)
+nurses <- read_csv(system.file("extdata/nurses.csv", package = "tfa"))
+shifts <- read_csv(system.file("extdata/shifts.csv", package = "tfa"))
+```
+
+**Question 2 - Transform all character columns in `nurses` so they start and end with `"`.**
+
+```{r}
+head(nurses)
+
+nurses <- nurses %>% 
+  mutate(across(where(is.character), ~str_c('"', .x, '"'))) %>% print()
+```
+
+
+**Question 3 - Unite all columns into a new column named `tuple` where each column is separated with `,`. Hint: have a look at the `unite` function. All columns can be selected using `everything()`.**
+
+```{r}
+?unite
+
+nurses <- nurses %>% 
+  unite(col = "tuple", sep = ", ", remove = FALSE) %>% print()
+```
+
+
+**Question 4 - Add `<` and `>` at the start and end of the `tuple` column.**
+
+```{r}
+nurses <- nurses %>% 
+  mutate(tuple = str_c("<", tuple, ">")) %>% print()
+```
+
+
+**Question 5 - Extract the `tuple` column and transform it into a string with `collapse = ",\n"`.**
+
+```{r}
+tuple <- nurses %>% 
+  pull(tuple) %>% 
+  str_c(collapse = ",\n") %>% print()
+```
+
+
+**Question 6 - Create a function `write_tuple` that takes nurses as input and write the tuples to a file.**
+
+```{r}
+write_tuple <- function(nurses, file) {
+  write_lines(x = "nurses = {", path = file, sep = " \n")
+  tuples <- nurses %>% 
+    pull(tuple) %>% 
+    str_c(collapse = ",\n")
+  write_lines(x = tuples, path = file, append = TRUE)
+  write_lines(x = "};", path = file, append = TRUE)
+}
+
+write_tuple(nurses, "nurse_tuple.dat")
+
+cat(read_file("nurse_tuple.dat"))
+
+
+# Teacher's solution didn't save all the changes we made along the way to nurses
+# So he has everything here in the function, instead of just the last changes, which makes sense I guess.
+# Would be like this then (clear nurses to vanilla state for this one to work properly):
+
+write_tuple <- function(nurses, file) {
+  write_lines(x = "nurses = {", path = file, sep = " \n")
+  tuples <- nurses %>% 
+    mutate(across(where(is.character), ~str_c('"', .x, '"'))) %>% 
+    unite("tuple", sep = ", ", remove = FALSE) %>% 
+    mutate(tuple = str_c("<", tuple, ">")) %>% 
+    pull(tuple) %>% 
+    str_c(collapse = ",\n")
+  write_lines(x = tuples, path = file, append = TRUE)
+  write_lines(x = "};", path = file, append = TRUE)
+}
+```
+
+
+**Question 7 - Modify `write_tuple` so it works if `shifts` are given as input instead of `nurses`.**
+
+```{r}
+write_tuple <- function(data, file) {
+  name <- deparse(substitute(data))
+  write_lines(x = str_c(name, " = {"), path = file, sep = " \n")
+  tuples <- shifts %>% 
+    mutate(across(where(is.character), ~str_c('"', .x, '"'))) %>% 
+    unite("tuple", sep = ", ", remove = FALSE) %>% 
+    mutate(tuple = str_c("<", tuple, ">")) %>% 
+    pull(tuple) %>% 
+    str_c(collapse = ",\n")
+  write_lines(x = tuples, path = file, append = TRUE)
+  write_lines(x = "};", path = file, append = TRUE)
+}
+
+write_tuple(shifts, "shifts_tuple.dat")
+
+cat(read_file("shifts_tuple.dat"))
+```
+
+
+**Question 8 - Modify `write_tuple` with a new input argument `append` which is false by default. If true, then then the file is not overwritten.**
+
+```{r}
+write_tuple <- function(data, file, append = FALSE) {
+  name <- deparse(substitute(data))
+  write_lines(x = str_c(name, " = {"), path = file, sep = " \n", append = append) # Change is here
+  tuples <- shifts %>% 
+    mutate(across(where(is.character), ~str_c('"', .x, '"'))) %>% 
+    unite("tuple", sep = ", ", remove = FALSE) %>% 
+    mutate(tuple = str_c("<", tuple, ">")) %>% 
+    pull(tuple) %>% 
+    str_c(collapse = ",\n")
+  write_lines(x = tuples, path = file, append = TRUE)
+  write_lines(x = "};", path = file, append = TRUE)
+}
+```
+
+
+**Question 9 - Write nurses and shifts to a single data file.**
+
+```{r}
+write_tuple(nurses, "nurses_shifts.dat")
+write_tuple(shifts, "nurses_shifts.dat", append = TRUE)
+
+cat(read_file("nurses_shifts.dat"))
+```
+
+
+
+## Colophon 
+<!-- Always keep this section for reproducibility -->
+
+This report has been created inside [RStudio](http://www.rstudio.com/ide/) using [R Markdown](https://rmarkdown.rstudio.com/). 
+
+The report was built using:
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+session <- devtools::session_info()
+session$platform
+```
+
+Along with these packages:
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+session$packages %>% 
+  select(package, loadedversion, date, source) %>% 
+  DT::datatable(rownames = FALSE,
+                class = 'cell-border stripe',
+                filter = list(position = 'top'),
+                options = list(pageLength = 5, 
+                           autoWidth = FALSE,
+                           bInfo = FALSE,
+                           paging = TRUE))
+```
+
+
+
+
+
+
+
+

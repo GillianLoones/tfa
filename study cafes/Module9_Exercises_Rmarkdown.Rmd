@@ -1,0 +1,903 @@
+---
+title: "Exercises Module 8"
+author:
+  - name: Gillian Loones
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+# set default chunk options
+knitr::opts_chunk$set(
+  echo = TRUE,
+  cache = TRUE,
+  autodep = TRUE
+  )
+```
+
+<!-- Some css for the comments (delete) -->
+```{css, echo=FALSE}
+.comment {
+  color: gold;
+  border-style: dashed;
+  border-width: thin;
+  padding: 10px;
+}
+```
+
+
+## Load packages:
+
+```{r}
+library(tidyverse)
+library(tfa)
+library(ggplot2)
+```
+
+
+## Exercise 9.7.1 - Gapminder
+
+In this exercise, we will demonstrate how relatively simple ggplot2 code can create insightful and aesthetically pleasing plots. As motivation we will create plots that help us better understand trends in world health and economics.
+
+Hans Rosling was the co-founder of the Gapminder Foundation, an organization dedicated to educating the public by using data to dispel common myths about the so-called developing world. Hans Rosling conveyed actual data-based trends in a dramatic way of his own, using effective data visualization. Here we will try to answer two questions:
+
+* Is it a fair characterization of today’s world to say it is divided into western rich nations and the developing world in Africa, Asia, and Latin America?
+* Has income inequality across countries worsened during the last 40 years?
+
+To answer these questions, we will be using the `gapminder` dataset provided in the dslabs package. This dataset was created using a number of spreadsheets available from the Gapminder Foundation. You can access the table like this:
+
+```{r}
+library(tidyverse)
+library(dslabs)
+data(gapminder)
+gapminder %>% as_tibble()
+```
+
+We start by testing our knowledge regarding differences in child mortality across different countries. For each of the six pairs of countries below, which country do you think had the highest child mortality rates in 2015? Which pairs do you think are most similar?
+
+* Sri Lanka or Turkey
+* Poland or South Korea
+* Malaysia or Russia
+* Pakistan or Vietnam
+* Thailand or South Africa
+
+When answering these questions without data, the non-European countries are typically picked as having higher child mortality rates: Sri Lanka over Turkey, South Korea over Poland, and Malaysia over Russia. It is also common to assume that countries considered to be part of the developing world: Pakistan, Vietnam, Thailand, and South Africa, have similarly high mortality rates.
+
+To answer these questions **with data**, we can use **dplyr**. For example, for the first comparison we see that:
+
+```{r}
+gapminder %>%
+  filter(year == 2015 & country %in% c("Sri Lanka","Turkey")) %>%
+  select(country, infant_mortality)
+```
+
+Turkey has the higher infant mortality rate.
+
+We can use this code on all comparisons and find similar numbers.
+
+We see that the European countries on this list have higher child mortality rates: Poland has a higher rate than South Korea, and Russia has a higher rate than Malaysia. We also see that Pakistan has a much higher rate than Vietnam, and South Africa has a much higher rate than Thailand. It turns out that when Hans Rosling gave this quiz to educated groups of people, the average score was less than 2.5 out of 5, worse than what they would have obtained had they guessed randomly. This implies that we are misinformed. We will try to use visualization to help us being more informed.
+
+#### The west vs the developing world
+
+There is a preconceived notion that the world is divided into two groups: the western world (Western Europe and North America), characterized by long life spans and small families, versus the developing world (Africa, Asia, and Latin America) characterized by short life spans and large families. But do the data support this dichotomous view?
+
+**Question 1 - Make a scatterplot of life expectancy versus fertility rates (average number of children per woman) in 1962. Use continent as color aesthetic.**
+
+```{r}
+gapminder %>% 
+  filter(year == 1962) %>% 
+  ggplot(aes(x = fertility, y = life_expectancy, color = continent)) +
+  geom_point()
+```
+
+**Question 2 - In 1962, “the West versus developing world” view was grounded in some reality. Is this still the case 50 years later? We could easily plot the 2012 data in the same way we did for 1962. To make comparisons, side by side plots are preferable. In ggplot2, we can achieve this by faceting variables and making a plot for each year. That is, you must filter by years 1962 and 2012 and add the layer facet_grid, which automatically separates the plots.**
+
+```{r}
+gapminder %>% 
+  filter(year == 1962 | year == 2012) %>% 
+  ggplot(aes(x = fertility, y = life_expectancy, color = continent)) +
+  geom_point() +
+  facet_grid(cols = vars(year))
+```
+
+**Question 3 - To explore the transformation through the years, make a plot for years 1962, 1970, 1980, 1990, 2000 and 2012 considering Europe and Asia. How has Asia transformed through the years compared to Europe? Since we consider many years, we will not want all the plots on the same row. Instead, we will want to use multiple rows and columns. The function facet_wrap permits us to do this by automatically wrapping the series of plots.**
+
+```{r}
+gapminder %>% 
+  filter(year %in% c(1962, 1970, 1980, 1990, 2000, 2012), continent %in% c("Europe", "Asia")) %>% 
+  ggplot(aes(x = fertility, y = life_expectancy, color = continent)) +
+  geom_point() +
+  facet_wrap(facets = vars(year))
+```
+
+**Question 4 - Illustrate the transformation for Asia using a single plot where you use year as color aesthetic**
+
+```{r}
+gapminder %>% 
+  filter(continent == "Asia") %>% 
+  ggplot(aes(x = fertility, y = life_expectancy, color = year)) +
+  geom_point()
+```
+
+#### Time series plots
+
+The visualizations above effectively illustrate that data no longer supports the western versus developing world view. Once we see these plots, new questions emerge. For example, which countries are improving more and which ones less? Was the improvement constant during the last 50 years or was it more accelerated during certain periods? For a closer look that may help answer these questions, we introduce time series plots.
+
+Time series plots have time in the x-axis and an outcome or measurement of interest on the y-axis. For example, here is a trend plot of United States fertility rates:
+
+```{r}
+gapminder %>% 
+  filter(country == "United States") %>% 
+  ggplot(aes(year, fertility)) +
+  geom_point()
+```
+
+We see that the trend is not linear at all. Instead there is sharp drop during the 1960s and 1970s to below 2. Then the trend comes back to 2 and stabilizes during the 1990s.
+
+When the points are regularly and densely spaced, as they are here, we create curves by joining the points with lines, to convey that these data are from a single series, here a country. To do this, we use the geom_line function instead of geom_point.
+
+**Question 5 - Make a line plot showing the time series of fertility versus year for United States.**
+
+```{r}
+gapminder %>% 
+  filter(country == "United States") %>% 
+  ggplot(aes(x = year, y = fertility)) +
+  geom_line()
+```
+
+**Question 6 - Line plots are particularly helpful when we look at more countries. Make a line plot showing the time series of fertility versus year for South Korea and Germany. Use country as color aesthetic.**
+
+```{r}
+gapminder %>% 
+  filter(country %in% c("South Korea", "Germany")) %>% 
+  ggplot(aes(x = year, y = fertility, color = country)) +
+  geom_line()
+```
+
+**Question 7 - Make a line plot showing the time series of life expectancy versus year for South Korea and Germany. Use country as color aesthetic.**
+
+```{r}
+gapminder %>% 
+  filter(country %in% c("South Korea", "Germany")) %>% 
+  ggplot(aes(x = year, y = life_expectancy, color = country)) +
+  geom_line()
+```
+
+#### Data transformations
+
+We now shift our attention to the second question related to the commonly held notion that wealth distribution across the world has become worse during the last decades. When general audiences are asked if poor countries have become poorer and rich countries become richer, the majority answers yes. By using stratification, histograms, smooth densities, and boxplots, we will be able to understand if this is in fact the case. First we learn how transformations can sometimes help provide more informative summaries and plots.
+
+The `gapminder` data table includes a column with the countries’ gross domestic product (GDP). GDP measures the market value of goods and services produced by a country in a year. The GDP per person is often used as a rough summary of a country’s wealth. Here we divide this quantity by 365 to obtain the more interpretable measure dollars per day. Using current US dollars as a unit, a person surviving on an income of less than $2 a day is defined to be living in absolute poverty. We add this variable to the data table:
+
+```{r}
+gapminder <- gapminder %>%  
+  mutate(dollars_per_day = gdp/population/365)
+```
+
+The GDP values are adjusted for inflation and represent current US dollars, so these values are meant to be comparable across the years. Of course, these are country averages and within each country there is much variability. All the graphs and insights described below relate to country averages and not to individuals.
+
+Here is a histogram of per day incomes from 1970:
+
+```{r}
+past_year <- 1970
+gapminder %>% 
+  filter(year == past_year & !is.na(gdp)) %>%
+  ggplot(aes(dollars_per_day)) + 
+  geom_histogram(binwidth = 1, color = "black")
+```
+We use the `color = "black"` argument to draw a boundary and clearly distinguish the bins.
+
+In this plot, we see that for the majority of countries, averages are below $10 a day. However, the majority of the x-axis is dedicated to the 35 countries with averages above $10. So the plot is not very informative about countries with values below $10 a day.
+
+it might be more informative to quickly be able to see how many countries have average daily incomes of about $1 (extremely poor), $2 (very poor), $4 (poor), $8 (middle), $16 (well off), $32 (rich), $64 (very rich) per day. These changes are multiplicative and log transformations convert multiplicative changes into additive ones: when using base 2, a doubling of a value turns into an increase by 1.
+
+**Question 8 - Make a histogram of `log2(dollars_per_day)` from 1970.**
+
+```{r}
+gapminder %>% 
+  filter(year == 1970, !is.na(gdp)) %>% 
+  ggplot(aes(x = log2(dollars_per_day))) +
+  geom_histogram(binwidth = 1, color = "black")
+```
+
+There are two ways we can use log transformations in plots. We can log the values before plotting them or use log scales on the axes. Both approaches are useful and have different strengths. If we log the data, we can more easily interpret intermediate values in the scale. For example, if we see:
+
+`----1----x----2--------3----`
+
+for log transformed data, we know that the value of x is about 1.5. If the scales are logged:
+
+`----1----x----10------100---`
+
+then, to determine x, we need to compute 10^1.5, which is not easy to do in our heads. The advantage of using logged scales is that we see the original values on the axes. However, the advantage of showing logged scales is that the original values are displayed in the plot, which are easier to interpret. For example, we would see “32 dollars a day” instead of “5 log base 2 dollars a day”.
+
+**Question 9 - Make a histogram of `dollars_per_day` from 1970 using a log2 scale on the x-axis. Compare it to the plot from Question 8. Hint: you can use the `scale_x_continuous` function with `trans = "log2"`.**
+
+```{r}
+# Question 8 plot
+plot8 <- gapminder %>% 
+  filter(year == 1970, !is.na(gdp)) %>% 
+  ggplot(aes(x = log2(dollars_per_day))) +
+  geom_histogram(binwidth = 1, color = "black")
+
+# Question 9 plot
+plot9 <- gapminder %>% 
+  filter(year == 1970, !is.na(gdp)) %>% 
+  ggplot(aes(x =dollars_per_day)) +
+  geom_histogram(binwidth = 1, color = "black") +
+  scale_x_continuous(trans = "log2")
+
+#Comparison
+library(patchwork)
+plot8 + plot9
+```
+The histograms in Question 8 and 9 have two bumps: one at about 4 and another at about 32. In statistics these bumps are sometimes referred to as modes. The mode of a distribution is the value with the highest frequency. The mode of the normal distribution is the average. When a distribution, like the one above, doesn’t monotonically decrease from the mode, we call the locations where it goes up and down again local modes and say that the distribution has multiple modes indicating different distributions for different groups.
+
+The histogram above suggests that the 1970 country income distribution has two modes: one at about 2 dollars per day (1 in the log 2 scale) and another at about 32 dollars per day (5 in the log 2 scale). However, the histogram does not show us if the two groups of countries are west versus the rest. Let us create the group column:
+
+```{r}
+gapminder <- gapminder %>% 
+  mutate(group = case_when(region %in% c("Western Europe", "Northern Europe","Southern Europe", 
+                  "Northern America", "Australia and New Zealand") ~ "West",
+                  TRUE ~ "Rest")) %>% 
+  as_tibble()
+```
+
+**Question 10 - Make a histogram of `dollars_per_day` from 1970 using a log2 scale and facet it by group. Is there a west versus the rest dichotomy?**
+
+```{r}
+gapminder %>% 
+  filter(year == 1970, !is.na(gdp)) %>% 
+  ggplot(aes(x = dollars_per_day)) +
+  geom_histogram(binwidth = 1, color = "black") +
+  scale_x_continuous(trans = "log2") +
+  facet_grid(cols = vars(group))
+```
+
+The exploratory data analysis above has revealed two characteristics about average income distribution in 1970. Using a histogram, we found a bimodal distribution with the modes relating to poor and rich countries. We will try to visualize these summaries in one plot.
+
+**Question 11 - Make a boxplot (`geom_boxplot`) of `dollars_per_day` (y-axis) versus `group` (x-axis) from 1970 using a log2 scale. Also add a (A WHAT??) the data using `geom_point()`.**
+
+```{r}
+gapminder %>% 
+  filter(year == 1970, !is.na(gdp)) %>% 
+  ggplot(aes(x=group, y=dollars_per_day)) +
+  geom_boxplot() +
+  scale_y_continuous(trans = "log2") +
+  geom_point()
+```
+
+Data exploration clearly shows that in 1970 there was a “west versus the rest” dichotomy. But does this dichotomy persist? We first have to be a little careful here since there are more countries represented in 2010 than in 1970: the total counts are larger. One reason for this is that several countries were founded after 1970. For example, the Soviet Union divided into several countries during the 1990s. Another reason is that data was available for more countries in 2010. Hence we only have to consider the countries with data available for both years:
+
+```{r}
+past_year <- 1970
+present_year <- 2010
+years <- c(past_year, present_year)
+country_list_1 <- gapminder %>% 
+  filter(year == past_year & !is.na(dollars_per_day)) %>% 
+  pull(country)
+
+country_list_2 <- gapminder %>% 
+  filter(year == present_year & !is.na(dollars_per_day)) %>% 
+  pull(country)
+      
+country_list <- intersect(country_list_1, country_list_2)
+```
+
+We can now filter the rows by `years` and `country_list`
+
+**Question 12 - Make a histogram of `dollars_per_day` from 1970 and 2010 using a log2 scale and facet it by group and year. Does the dichotomy persist?**   
+
+```{r}
+gapminder %>% 
+  filter(year %in% years, country %in% country_list) %>% 
+  ggplot(aes(dollars_per_day)) +
+  geom_histogram(binwidth = 1, color = "black") +
+  scale_x_continuous(trans = "log2") +
+  facet_grid(rows = vars(group), cols = vars(year))
+```
+
+The income gap between rich and poor countries has narrowed considerably during the last 40 years
+
+**Question 13 - Make a boxplot of `dollars_per_day` versus group from 1970 and 2010 using a log2 scale. Use year as fill aesthetic.**
+*Hint: you must convert year to a factor using `mutate(year = factor(year))`.*
+
+```{r}
+gapminder %>%
+  mutate(year = factor(year)) %>% 
+  filter(year %in% years, country %in% country_list) %>% 
+  ggplot(aes(x = group, y = dollars_per_day, fill = year)) +
+  geom_boxplot() +
+  scale_y_continuous(trans = "log2")
+```
+
+We now see that the rich countries have become a bit richer, but percentage-wise, the poor countries appear to have improved more. In particular, we see that the proportion of developing countries earning more than $16 a day increased substantially.
+
+The previous data exploration suggested that the income gap between rich and poor countries has narrowed considerably during the last 40 years. We used a series of histograms and boxplots to see this. Let us now shift to density plots. Let’s start by noting that density plots for income distribution in 1970 and 2010 deliver the message that the gap is closing:
+
+```{r}
+gapminder %>% 
+  filter(year %in% years & country %in% country_list) %>%
+  ggplot(aes(dollars_per_day)) +
+  geom_density(fill = "grey") + 
+  scale_x_continuous(trans = "log2") + 
+  facet_grid(cols = vars(year))
+```
+
+In the 1970 plot, we see two clear modes: poor and rich countries. In 2010, it appears that some of the poor countries have shifted towards the right, closing the gap.
+
+The next message we need to convey is that the reason for this change in distribution is that several poor countries became richer, rather than some rich countries becoming poorer. To do this, we can assign a color to the groups we identified during data exploration.
+
+```{r}
+gapminder %>% 
+  filter(year %in% years & country %in% country_list) %>%
+  ggplot(aes(dollars_per_day, fill = group)) +
+  scale_x_continuous(trans = "log2") +
+  geom_density(alpha = 0.2) + 
+  facet_grid(cols = vars(year))
+```
+
+Note the default is to have the area represented by each distribution add up to 1, regardless of the size of each group: the number of countries in the ‘west’ group is 21 and in the ‘rest’ group is 87. We may use count on the y-axis instead:
+
+```{r}
+p <- gapminder %>% 
+  filter(year %in% years & country %in% country_list) %>%
+  ggplot(aes(dollars_per_day, y = ..count.., fill = group)) +
+  scale_x_continuous(trans = "log2", limit = c(0.125, 300)) +
+  facet_grid(cols = vars(year))
+p + geom_density(alpha = 0.2)
+```
+
+**Question 14 - To get densities smoother, use bw = 0.75 argument so that the same bandwidth is used in each density. Comment on the plot.**
+
+```{r}
+p <- gapminder %>% 
+  filter(year %in% years & country %in% country_list) %>%
+  ggplot(aes(dollars_per_day, y = ..count.., fill = group)) +
+  scale_x_continuous(trans = "log2", limit = c(0.125, 300)) +
+  facet_grid(cols = vars(year))
+p + geom_density(alpha = 0.2, bw = 0.75)
+```
+
+INTERPRETATION: This plot now shows that the developing world distribution is changing.
+
+As a final point, we note that these distributions weigh every country the same. So if most of the population is improving, but living in a very large country, such as China, we might not appreciate this. We can actually weight the smooth densities using the weight mapping argument. First we modify the dataset: *WELL THIS IS JUST MISSING SO SOLUTION DOESN'T WORK....*
+
+**Question 15 - Modify the ggplot function with a weight argument and plot the density (with area equal 1).**
+
+```{r}
+gapminder %>% 
+  ggplot(aes(dollars_per_day, fill = group, weight = weight)) +
+  scale_x_continuous(trans = "log2", limit = c(0.125, 300)) + 
+  geom_density(alpha = 0.2, bw = 0.75) + 
+  facet_grid(cols = vars(year))
+```
+
+We now see that the rich countries have become a bit richer, but percentage-wise, the poor countries appear to have improved more. In particular, we see that the proportion of developing countries earning more than $16 a day increased substantially.
+
+
+## Exercise 9.7.2 - Profit
+
+Consider the dataset profit (provided by the tfa package) containing quarterly financial records for each costumer, product, etc.:
+
+```{r}
+# remotes::install_github("bss-osca/tfa/tfa-package", upgrade = FALSE)   # upgrade first
+library(tfa)
+library(skimr)
+glimpse(profit)
+skim(profit)
+```
+
+**Question 1 - Make a barplot that shows the total profitability of the product lines. Use the following steps:**
+  
+  **a) Convert all character columns to factor columns.**
+  
+```{r}
+# Took me long to get this right lol. It's in the ~ and the .x
+profit <- profit %>% 
+  mutate(across(Channel:`Product Line`, ~as.factor(.x))) 
+
+# Alternatively, found this in across function documentation
+profit <- profit %>% 
+  mutate(across(where(is_character), as.factor))
+
+glimpse(profit)
+```
+
+  **b) Group by product line, calculate the total profit and plot profit for each product line.**
+  
+```{r}
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = `Product Line`, y = Profit)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90))
+
+#Teacher solution (ouch those axis labels)
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = `Product Line`, y = Profit)) +
+  geom_col()
+```
+
+  **c) Plot profit for each product line where product line is reordered based on total profit.**
+  
+```{r}
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Product Line`, -Profit), y = Profit)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+  **d) Add a title to the plot using labs.**
+  
+```{r}
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Product Line`, -Profit), y = Profit)) +
+  geom_col() +
+  labs(title = "Total profit for each product line")
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+  **e) Rotate the x-axis labels 90 degrees.**
+  
+```{r}
+# Ah here it is finally....
+profit %>% 
+  group_by(`Product Line`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Product Line`, -Profit), y = Profit)) +
+  geom_col() +
+  labs(title = "Total profit for each product line") +
+  xlab("Product line") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+  **f) Which product line is best and worst?**
+
+* Best - Credit Products
+* Worst - Third Party Products
+
+Same conclusion as Module 8 (duh).
+
+
+**Question 2 - Make a barplot that shows the total profitability of the product lines in each quarter. Are there details we have missed in Question 1?**
+
+```{r}
+profit %>% 
+  group_by(`Product Line`, Quarter) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Product Line`, -Profit), y = Profit, fill = Quarter)) +
+  geom_col() +
+  labs(title = "Total profit for each product line") +
+  xlab("Product line") +
+  facet_grid(cols = vars(Quarter)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+Quarter seems to significantly the profit of some product lines.
+
+**Question 3 - Make a boxplot of profitability of the product lines. Any insight?**
+
+```{r}
+profit %>% 
+  ggplot(aes(x = `Product Line`, y = Profit)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+Three of the six lines have quite some variability in their profitability.
+
+**Question 4 - Make a barplot that shows the total profitability of the customers. Which customer is best and worst?**
+
+```{r}
+profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Customer ID`, -Profit), y = Profit)) +
+  geom_col() +
+  xlab("Customer ID") +
+  labs(title = "Total profit per customer")
+```
+
+* Best customer - WEM
+* Worst customer - PBI (by a lot lol)
+
+
+**Question 5 - Make a barplot that shows the mean profitability of the customers. Which customer is best and worst? Compare against Question 4 and discuss.**
+
+```{r}
+library(patchwork)
+
+# Mean profit
+p1 <- profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Profit = mean(Profit)) %>% 
+  ggplot(aes(x = reorder(`Customer ID`, -Profit), y = Profit)) +
+  geom_col() +
+  xlab("Customer ID") +
+  labs(title = "Mean profit per customer") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+# Total profit (previous question)
+p2 <- profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Customer ID`, -Profit), y = Profit)) +
+  geom_col() +
+  xlab("Customer ID") +
+  labs(title = "Total profit per customer") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+p1 / p2
+```
+
+* Best - INB
+* Worst - IAS
+
+Different from best & worst total profitable customers
+
+
+**Question 6 - Make a plot illustrating number of transactions for each customer. Use total profit as fill atheistic.**
+
+```{r}
+profit %>% 
+  group_by(`Customer ID`) %>% 
+  summarise(Transactions = n(), Profit = sum(Profit)) %>% 
+  ggplot(aes(x = reorder(`Customer ID`, -Transactions), y = Transactions, fill = Profit)) +
+  geom_col() +
+  xlab("Customer ID") +
+  labs(title = "Number of transactions per customer")
+```
+
+
+**Question 7 - Make a boxplot illustrating the profit for each customer.**
+
+```{r}
+profit %>% 
+  ggplot(aes(x = `Customer ID`, y = Profit)) +
+  geom_boxplot() +
+  labs(title = "Profit per customer")
+```
+
+
+
+## Exercise 9.7.3 - COVID 19
+
+Countries around the world are responding to an outbreak of respiratory illness caused by a novel corona virus, COVID-19. The outbreak first started in Wuhan, China, but cases have been identified in a growing number of other locations internationally, including the United States. In this report we explore how the trajectory of the cumulative deaths in a number of countries.
+
+The data come from the coronavirus package, which pulls data from the Johns Hopkins University Center for Systems Science and Engineering (JHU CCSE) Corona virus repository. The corona virus package provides a tidy format dataset of the 2019 Novel Corona virus COVID-19 (2019-nCoV) epidemic. The package is available on GitHub here and is updated daily.
+
+First load the following packages:
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(tfa)
+
+# devtools::install_github("RamiKrispin/coronavirus", dependencies = FALSE)
+library(coronavirus) 
+library(lubridate)   # package for handling dates
+```
+
+The data frame called `coronavirus` in the coronavirus package provides a daily summary of the Corona virus (COVID-19) cases by country. Each row in the data frame represents a country (or, where relevant, state/province). Note that the data provided in this package provides daily number of deaths, confirmed cases, and recovered cases. We calculate the total number of cases per day, cumulative numbers and days since first record:
+
+```{r}
+dat <- coronavirus %>%
+  group_by(country, date, type) %>% 
+  summarise(tot_cases = sum(cases)) %>%
+  group_by(country, type) %>% 
+  arrange(date) %>%
+  mutate(cumulative_cases = cumsum(tot_cases)) %>%
+  ungroup() %>%
+  mutate(
+    days_elapsed = as.numeric(date - min(date)),
+    year = year(date)
+  ) %>% print()
+```
+
+**Question 1 - Calculate and plot the number of confirmed, death and recovered cases per day given date using `facet_grid` and `geom_col`.**
+
+```{r}
+dat %>% 
+  group_by(date, type) %>% 
+  summarise(tot_cases = sum(tot_cases)) %>% 
+  ggplot(aes(x = date, y = tot_cases)) +
+  geom_col() +
+  facet_grid(rows = vars(type)) +
+  labs(title = "Total number of COVID-19 cases per day") +
+  ylab("Cases")
+
+# Now the middle one is useless, so adjust scaling in facet_grid
+
+dat %>% 
+  group_by(date, type) %>% 
+  summarise(tot_cases = sum(tot_cases)) %>% 
+  ggplot(aes(x = date, y = tot_cases)) +
+  geom_col() +
+  facet_grid(rows = vars(type), scales = "free_y") +
+  labs(title = "Total number of COVID-19 cases per day") +
+  ylab("Cases")
+```
+
+Consider the following set of countries:
+
+```{r}
+countries <- c(
+  "China",
+  "France",
+  "Denmark",
+  "US",
+  "Italy"
+)
+```
+
+**Question 2 - Plot a line plot of the cumulative number of deaths as a function of days elapsed for the selected countries. Use country as color aesthetic.**
+
+```{r}
+dat %>% 
+  filter(country %in% countries, type == "death") %>% 
+  ggplot(aes(x = days_elapsed, y = cumulative_cases, color = country)) +
+  geom_line() +
+  labs(title = "Cumulative COVID-19 deaths for selected countries") +
+  xlab(str_c("Days elapsed since ", min(dat$date))) +
+  ylab("Cumulative deaths")
+```
+
+Since the countries have different population sizes we would like to calculate some numbers relative to the population size. First we need population sizes for each country. They are given in the dataset `world_pop` in the tfa package:
+
+```{r}
+world_pop <- tfa::world_pop %>%
+  filter(country %in% countries) %>% 
+  print()
+```
+
+We can join the datasets using:
+
+```{r}
+dat <- dat %>% 
+  filter(country %in% countries) %>% 
+  left_join(world_pop) %>% 
+  print()
+```
+
+
+**Question 3 - Calculate `tot_cases_pop` as number of cases per 100,000 inhabitants. That is, total cases divided by population and multiplied by 100,000.**
+
+```{r}
+dat <- dat %>% 
+  mutate(tot_cases_pop = 100000 * tot_cases / pop)
+dat
+```
+
+
+**Question 4 - Plot the number of confirmed cases per 100,000 inhabitants for the last 21 days. Use country as fill aesthetic.**
+
+```{r}
+dat %>%
+  filter(days_elapsed >= max(days_elapsed) - 21, # teacher: date >= today() - days(21)
+         type == "confirmed") %>%
+  ggplot(aes(x = date, y = tot_cases_pop, fill = country)) +
+  geom_col() + # teacher used argument: position = position_dodge2()
+  labs(title = "Confirmed cases per day", 
+       y = "Number of confirmed cases per 100,000 inhabitants")
+```
+
+
+**Question 5 - Plot the number of confirmed cases per 100000 inhabitants in Denmark for the last 14 days.**
+
+```{r}
+dat %>%
+  filter(days_elapsed > max(days_elapsed) - 14, # teacher: date >= today() - days(21)
+         type == "confirmed",
+         country == "Denmark") %>%
+  ggplot(aes(x = date, y = tot_cases_pop)) +
+  geom_col() +
+  labs(title = "Denmark: confirmed cases per day per 100,000 inhabitants", 
+       y = "Confirmed cases per 100,000 inhabitants")
+```
+
+
+
+## Exercise 9.7.4 - LEGO and sales
+
+Consider (simulated) data of Lego sales in 2018 for a sample of customers who bought legos in the US. The dataset is called `lego_sales`. You can find descriptions of each of the variables in the help file for the dataset, which you can access by running `?lego_sales` in your Console.
+
+You need the `tidyverse` package as usual and the `dsbox` package for the data.
+
+```{r}
+library(tidyverse)
+library(dsbox)   # devtools::install_github("rstudio-education/dsbox")
+
+?lego_sales
+view(lego_sales)
+glimpse(lego_sales)
+str(lego_sales)
+```
+
+Answer the following questions using a table with numbers and try to visualize it. For each question, state your answer in a sentence, e.g. “The first three common names of purchasers are …”.
+
+**Question 1 - What are the three most common first names of purchasers?**
+
+```{r}
+tbl1 <- lego_sales %>% 
+  group_by(first_name) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n)) %>% print()
+
+tbl1 %>% 
+  slice_head(n = 20) %>% 
+  ggplot(aes(x = n, y = reorder(first_name, n))) +
+  geom_col() +
+  labs(title = "20 most common first names", 
+       subtitle = "Out of people who buy LEGO", 
+       x = "count", 
+       y = "first name")
+```
+
+The three most common first names among LEGO purchasers are "Jackson", "Jacob", and "Joseph". All three with a J, coincidentally...
+
+
+**Question 2 - What are the three most common themes of Lego sets purchased?**
+
+```{r}
+tbl2 <- lego_sales %>% 
+  group_by(theme) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n)) %>% print()
+
+tbl2 %>% 
+  ggplot(aes(x = n, y = reorder(theme, n))) +
+  geom_col() +
+  labs(title = "25 most common LEGO themes", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "count", 
+       y = "theme")
+```
+
+The three most common LEGO themes are "Star Wars", "Nexo Knights", and "Mixels".
+
+
+**Question 3 - Among the most common theme of lego sets purchased, what is the most common subtheme?**
+
+```{r}
+tbl3 <- lego_sales %>% 
+  filter(theme == "Star Wars") %>% 
+  group_by(subtheme) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n)) %>% print()
+
+tbl3 %>% 
+  ggplot(aes(x = n, y = reorder(subtheme, n))) +
+  geom_col() +
+  labs(title = "11 most common Star Wars LEGO themes", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "count", 
+       y = "theme")
+```
+
+The three most common LEGO Star War themes are "The Force Awakens", "Buildable Figures", and "MicroFighters".
+
+
+**Question 4 - Create a new variable called `age_group` and group the ages into the following categories: “18 and under”, “19 - 25”, “26 - 35”, “36 - 50”, “51 and over”.**
+
+```{r}
+lego_sales <- lego_sales %>% 
+  mutate(age_group = case_when(
+    age <= 18         ~ "18 and under", 
+    age %in% c(19:25) ~ "19 - 25",
+    age %in% c(26:35) ~ "26 - 35",
+    age %in% c(36:50) ~ "36 - 50",
+    age >= 51         ~ "51 and over", 
+    )
+  ) %>% print()
+```
+
+
+**Question 5 - Which age group has purchased the highest number of lego sets.**
+
+```{r}
+tbl5 <- lego_sales %>% 
+  group_by(age_group) %>% 
+  summarise(n = sum(n())) %>% 
+  arrange(desc(n)) %>% print()
+
+tbl5 %>% 
+  ggplot(aes(x = n, y = age_group)) +
+  geom_col() +
+  labs(title = "LEGO purchases by age", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "count", 
+       y = "age group")
+```
+
+The three 'middle' age groups are the most common LEGO purchasers. 36-50, 26-35, and 19-25 respectively.
+
+
+**Question 6 - Which age group has spent the most money on legos?**
+
+```{r}
+tbl6 <- lego_sales %>% 
+  group_by(age_group) %>% 
+  summarise(total_spending = sum(us_price * quantity)) %>% 
+  arrange(desc(total_spending)) %>% print()
+
+tbl6 %>% 
+  ggplot(aes(x = total_spending, y = age_group)) +
+  geom_col() +
+  labs(title = "Total spending on LEGO by age", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "spending in USD", 
+       y = "age group")
+```
+
+This gives the same result as last question. The biggest spenders are in the age group 36-50.
+
+
+**Question 7 - Come up with a question you want to answer using these data, and write it down. Then, create a data visualization that answers the question, and explain how your visualization answers the question.**
+
+Question: "Do LEGO sets purchased by older customers generally contain more pieces (i.e. do older customers buy more complex LEGO sets)?
+
+```{r}
+tbl7 <- lego_sales %>% 
+  filter(!is.na(pieces)) %>% 
+  group_by(age_group) %>% 
+  summarise(avg_pieces = mean(pieces)) %>% print()
+
+tbl7 %>% 
+  ggplot(aes(x = avg_pieces, y = age_group)) +
+  geom_col() +
+  labs(title = "Number of pieces in purchased LEGO sets by age", 
+       subtitle = "Based on sales in the United States, 2018", 
+       x = "Average number of pieces", 
+       y = "age group")
+```
+
+There doesn't seem to be a significant difference, except that 18 and under typically buy less complex sets, which makes sense in hindsight.
+
+
+
+
+## Colophon 
+<!-- Always keep this section for reproducibility -->
+
+This report has been created inside [RStudio](http://www.rstudio.com/ide/) using [R Markdown](https://rmarkdown.rstudio.com/). 
+
+The report was built using:
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+session <- devtools::session_info()
+session$platform
+```
+
+Along with these packages:
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+session$packages %>% 
+  select(package, loadedversion, date, source) %>% 
+  DT::datatable(rownames = FALSE,
+                class = 'cell-border stripe',
+                filter = list(position = 'top'),
+                options = list(pageLength = 5, 
+                           autoWidth = FALSE,
+                           bInfo = FALSE,
+                           paging = TRUE))
+```
+
+
+
+
+
+
+
+
+
+
