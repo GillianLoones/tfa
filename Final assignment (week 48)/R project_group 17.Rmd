@@ -613,8 +613,7 @@ This could be useful for some kind of maintenance activity that needs to be done
 ```{r}
 # DONE
 dat %>% 
-  group_by(tailnum) %>% 
-  count(tailnum, sort = TRUE) %>% 
+  count(tailnum, month, sort = TRUE) %>% 
   paged_table()
 ```
 
@@ -673,16 +672,20 @@ dat_w <- weather %>%
 We start by plotting temperature over the year with airport/origin as color aesthetic. We also add a smoothing line:
 
 ```{r}
+# DONE
 dat_w %>% 
-  ggplot(aes(x = month, y = temp, color = origin_name)) +
-  geom_point(alpha = 0.1) +
-  geom_smooth(alpha = 0.1) +
+  ggplot(aes(x = time_hour, y = temp, color = origin_name)) +
+  geom_point(alpha = 0.025) +
+  geom_smooth() +
   labs(title = "Temperature fluctuation at NYC airports throughout the year 2013",
        x = "Month (number)",
        y = "Temp (C°)")
 ```
 
-Note that we have used the `alpha` aesthetic to make the lines more transparent. [Comment on the results here] JFK has a lower temperature throughout spring and summer. Otherwise the airports are pretty similar. I know JFK is close to the water, so the that might account for the slightly lower temperature.
+Note that we have used the `alpha` aesthetic to make the lines more transparent. 
+
+*Comment*: 
+JFK has a lower temperature throughout spring and summer. Otherwise the airports are pretty similar. I know JFK is close to the water, so the that might account for the slightly lower temperature.
 
 ### Are the temparatures different in the airports? 
 
@@ -719,9 +722,8 @@ Finally, let us consider a boxplot of temparature for each month:
 ```{r}
 # DONE
 dat_w %>% 
-  ggplot(aes(y = temp)) +
+  ggplot(aes(x = factor(month), y = temp)) +
   geom_boxplot() +
-  facet_wrap(vars(month)) +
   labs(title = "Temperature boxplots NYC airports per month", 
        y = "Temperature (C°)") +
   theme(axis.text.x = element_blank(), 
@@ -729,13 +731,13 @@ dat_w %>%
 ```
 
 *Comment*: 
-We see the natural evolution of temperature through the seasons. The variance in temperatures also seems to be quite a bit lower in the warmer months. Similarly, warmer months seems to have fewer and less extreme outliers.
+We see the natural evolution of temperature through the seasons. The variance in temperatures also seems to be quite a bit lower in the warmer months. Bu then the transition months in spring and fall seemm to have more and more extreme outliers.
 
 
 What does the dot at the bottom of the plot for May correspond to?  Explain what might have occurred in May to produce this point.
 
 *Comment*:
-May has a single observation of around -10C°, while it's mean lies around 15C°. I honestly can't think of an explanation right away. Likely a measurement error? I can't imagine there was one freak winter blizzard day in May, but who knows.
+May has a single observation of around -10C°, while it's mean lies around 15C°. I honestly can't think of an explanation right away. Likely a measurement error. I can't imagine there was one freak winter blizzard day in May, but who knows.
 
 
 ## Any insights on canceled flights?
